@@ -17,8 +17,8 @@
     "./*": "./src/*.ts"
   },
   "devDependencies": {
-    "@ai-sdk/amazon-bedrock": "2.2.10",
-    "@ai-sdk/google-vertex": "3.0.16",
+    "@ai-sdk/amazon-bedrock": "workspace:*",
+    "@ai-sdk/google-vertex": "workspace:*",
     "@octokit/webhooks-types": "7.6.1",
     "@parcel/watcher-darwin-arm64": "2.5.1",
     "@parcel/watcher-darwin-x64": "2.5.1",
@@ -53,7 +53,7 @@
     "@pierre/precision-diffs": "catalog:",
     "@standard-schema/spec": "1.0.0",
     "@zip.js/zip.js": "2.7.62",
-    "ai": "catalog:",
+    "ai": "workspace:*",
     "chokidar": "4.0.3",
     "decimal.js": "10.5.0",
     "diff": "catalog:",
@@ -76,5 +76,10 @@
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"
+  },
+  "resolutions": {
+    "ai": "workspace:*",
+    "@ai-sdk/openai": "workspace:*",
+    "@ai-sdk/openai-compatible": "workspace:*"
   }
 }

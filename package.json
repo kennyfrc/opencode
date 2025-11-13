@@ -14,7 +14,9 @@
       "packages/*",
       "packages/console/*",
       "packages/sdk/js",
-      "packages/slack"
+      "packages/slack",
+      "sdks/ai-sdk/packages/*",
+      "sdks/ai-sdk/tools/*"
     ],
     "catalog": {
       "@types/bun": "1.3.0",
