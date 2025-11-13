@@ -199,6 +199,53 @@ describe('tool calls', () => {
   });
 });
 
+describe('assistant reasoning serialization', () => {
+  it('should capture reasoning parts into reasoning_content without fallback', () => {
+    const result = convertToOpenAICompatibleChatMessages([
+      {
+        role: 'assistant',
+        content: [
+          { type: 'reasoning', text: 'Thinking through the steps. ' },
+          { type: 'reasoning', text: 'Need to recall the fact.' },
+          { type: 'text', text: 'Paris is the capital of France.' },
+        ],
+      },
+    ]);
+
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: 'Paris is the capital of France.',
+        reasoning_content: 'Thinking through the steps. Need to recall the fact.',
+      },
+    ]);
+  });
+
+  it('should inline <think> blocks when reasoningFallback is set', () => {
+    const result = convertToOpenAICompatibleChatMessages(
+      [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'reasoning', text: 'Consider previous context.' },
+            { type: 'text', text: 'Result delivered.' },
+          ],
+        },
+      ],
+      {
+        reasoningFallback: 'angle-brackets',
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '<think>Consider previous context.</think>Result delivered.',
+      },
+    ]);
+  });
+});
+
 describe('provider-specific metadata merging', () => {
   it('should merge system message metadata', async () => {
     const result = convertToOpenAICompatibleChatMessages([

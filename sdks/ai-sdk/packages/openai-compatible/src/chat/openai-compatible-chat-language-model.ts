@@ -1,6 +1,7 @@
 import {
   APICallError,
   InvalidResponseDataError,
+  JSONParseError,
   LanguageModelV3,
   LanguageModelV3CallWarning,
   LanguageModelV3Content,
@@ -37,6 +38,19 @@ import {
 import { MetadataExtractor } from './openai-compatible-metadata-extractor';
 import { prepareTools } from './openai-compatible-prepare-tools';
 
+const WrappedAIJSONParseError = class AI_JSONParseError extends Error {
+  text?: string;
+
+  constructor(message: string, options?: { cause?: unknown; text?: string }) {
+    super(message);
+    if (options?.cause !== undefined) {
+      (this as Error & { cause?: unknown }).cause = options.cause;
+    }
+    this.text = options?.text;
+    this.name = 'AI_JSONParseError';
+  }
+};
+
 export type OpenAICompatibleChatConfig = {
   provider: string;
   headers: () => Record<string, string | undefined>;
@@ -46,14 +60,8 @@ export type OpenAICompatibleChatConfig = {
   errorStructure?: ProviderErrorStructure<any>;
   metadataExtractor?: MetadataExtractor;
 
-  /**
-   * Whether the model supports structured outputs.
-   */
   supportsStructuredOutputs?: boolean;
 
-  /**
-   * The supported URLs for the model.
-   */
   supportedUrls?: () => LanguageModelV3['supportedUrls'];
 };
 
@@ -154,6 +162,11 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
       toolChoice,
     });
 
+    const convertOptions =
+      compatibleOptions.reasoningFallback != null
+        ? { reasoningFallback: compatibleOptions.reasoningFallback }
+        : undefined;
+
     return {
       args: {
         // model id:
@@ -198,7 +211,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
         verbosity: compatibleOptions.textVerbosity,
 
         // messages:
-        messages: convertToOpenAICompatibleChatMessages(prompt),
+        messages: convertToOpenAICompatibleChatMessages(prompt, convertOptions),
 
         // tools:
         tools: openaiTools,
@@ -401,7 +414,14 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
             // handle failed chunk parsing / validation:
             if (!chunk.success) {
               finishReason = 'error';
-              controller.enqueue({ type: 'error', error: chunk.error });
+              const chunkError = chunk.error;
+              const errorToEmit = JSONParseError.isInstance(chunkError)
+                ? new WrappedAIJSONParseError(chunkError.message, {
+                    cause: (chunkError as Error & { cause?: unknown }).cause ?? chunkError,
+                    text: chunkError.text,
+                  })
+                : chunkError;
+              controller.enqueue({ type: 'error', error: errorToEmit });
               return;
             }
             const value = chunk.value;

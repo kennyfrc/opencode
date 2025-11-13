@@ -21,6 +21,7 @@ export class JSONParseError extends AISDKError {
       cause,
     });
 
+    this.name = name;
     this.text = text;
   }
 

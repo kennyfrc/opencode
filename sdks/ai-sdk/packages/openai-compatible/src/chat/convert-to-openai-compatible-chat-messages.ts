@@ -3,7 +3,10 @@ import {
   SharedV3ProviderMetadata,
   UnsupportedFunctionalityError,
 } from '@ai-sdk/provider';
-import { OpenAICompatibleChatPrompt } from './openai-compatible-api-types';
+import {
+  OpenAICompatibleAssistantMessage,
+  OpenAICompatibleChatPrompt,
+} from './openai-compatible-api-types';
 import { convertToBase64 } from '@ai-sdk/provider-utils';
 
 function getOpenAIMetadata(message: {
@@ -12,8 +15,13 @@ function getOpenAIMetadata(message: {
   return message?.providerOptions?.openaiCompatible ?? {};
 }
 
+type ConvertToOpenAICompatibleChatMessagesOptions = {
+  reasoningFallback?: 'angle-brackets';
+};
+
 export function convertToOpenAICompatibleChatMessages(
   prompt: LanguageModelV3Prompt,
+  options?: ConvertToOpenAICompatibleChatMessagesOptions,
 ): OpenAICompatibleChatPrompt {
   const messages: OpenAICompatibleChatPrompt = [];
   for (const { role, content, ...message } of prompt) {
@@ -75,6 +83,7 @@ export function convertToOpenAICompatibleChatMessages(
 
       case 'assistant': {
         let text = '';
+        let reasoning = '';
         const toolCalls: Array<{
           id: string;
           type: 'function';
@@ -86,6 +95,10 @@ export function convertToOpenAICompatibleChatMessages(
           switch (part.type) {
             case 'text': {
               text += part.text;
+              break;
+            }
+            case 'reasoning': {
+              reasoning += part.text;
               break;
             }
             case 'tool-call': {
@@ -103,12 +116,23 @@ export function convertToOpenAICompatibleChatMessages(
           }
         }
 
-        messages.push({
+        const trimmedReasoning = reasoning.trimEnd();
+        let assistantContent = text;
+        if (trimmedReasoning && options?.reasoningFallback === 'angle-brackets') {
+          assistantContent = `<think>${trimmedReasoning}</think>${text}`;
+        }
+
+        const assistantMessage: OpenAICompatibleAssistantMessage = {
           role: 'assistant',
-          content: text,
+          content: assistantContent,
           tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
           ...metadata,
-        });
+        };
+        const includeReasoningField =
+          trimmedReasoning && options?.reasoningFallback !== 'angle-brackets';
+        if (includeReasoningField) assistantMessage.reasoning_content = trimmedReasoning;
+
+        messages.push(assistantMessage);
 
         break;
       }

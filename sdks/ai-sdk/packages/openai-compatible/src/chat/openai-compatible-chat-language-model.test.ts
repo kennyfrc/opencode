@@ -203,6 +203,63 @@ describe('doGenerate', () => {
     `);
   });
 
+  it('should include reasoning_content in request payload when prompt has reasoning parts', async () => {
+    prepareJsonResponse({ content: 'Done' });
+
+    await model.doGenerate({
+      prompt: [
+        { role: 'user', content: [{ type: 'text', text: 'Who leads France?' }] },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'reasoning', text: 'Recall the capital before answering.  ' },
+            { type: 'text', text: 'France is led by the President. ' },
+          ],
+        },
+      ],
+    });
+
+    expect(await server.calls[0].requestBodyJson).toMatchObject({
+      messages: [
+        { role: 'user', content: 'Who leads France?' },
+        {
+          role: 'assistant',
+          content: 'France is led by the President. ',
+          reasoning_content: 'Recall the capital before answering.',
+        },
+      ],
+    });
+  });
+
+  it('should inline <think> fallback when configured', async () => {
+    prepareJsonResponse({ content: 'Done' });
+
+    await model.doGenerate({
+      prompt: [
+        { role: 'user', content: [{ type: 'text', text: 'Summarize.' }] },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'reasoning', text: 'Outline key facts.' },
+            { type: 'text', text: 'Summary here.' },
+          ],
+        },
+      ],
+      providerOptions: {
+        'test-provider': {
+          reasoningFallback: 'angle-brackets',
+        },
+      },
+    });
+
+    const body = await server.calls[0].requestBodyJson;
+    expect(body.messages[1]).toMatchObject({
+      role: 'assistant',
+      content: '<think>Outline key facts.</think>Summary here.',
+    });
+    expect(body.messages[1].reasoning_content).toBeUndefined();
+  });
+
   it('should extract reasoning from reasoning field when reasoning_content is not provided', async () => {
     prepareJsonResponse({
       content: 'Hello, World!',
@@ -2022,7 +2079,7 @@ describe('doStream', () => {
           },
           {
             "error": [AI_JSONParseError: JSON parsing failed: Text: {unparsable}.
-        Error message: Expected property name or '}' in JSON at position 1 (line 1 column 2)],
+        Error message: JSON Parse error: Expected '}'],
             "type": "error",
           },
           {
