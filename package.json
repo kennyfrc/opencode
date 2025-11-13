@@ -44,7 +44,9 @@
       "tailwindcss": "4.1.11",
       "virtua": "0.42.3",
       "vite": "7.1.4",
-      "vite-plugin-solid": "2.11.8"
+      "vite-plugin-solid": "2.11.8",
+      "@sveltejs/vite-plugin-svelte": "^5.0.3",
+      "vitest": "^3.0.0"
     }
   },
   "devDependencies": {
@@ -80,6 +82,10 @@
   },
   "overrides": {
     "@types/bun": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-solid": "catalog:",
+    "@sveltejs/vite-plugin-svelte": "catalog:",
+    "vitest": "catalog:"
   }
 }
