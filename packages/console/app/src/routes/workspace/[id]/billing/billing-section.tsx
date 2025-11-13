@@ -5,6 +5,7 @@ import { withActor } from "~/context/auth.withActor"
 import { IconCreditCard, IconStripe } from "~/component/icon"
 import styles from "./billing-section.module.css"
 import { createCheckoutUrl, queryBillingInfo } from "../../common"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const createSessionUrl = action(async (workspaceID: string, returnUrl: string) => {
   "use server"
@@ -12,9 +13,9 @@ const createSessionUrl = action(async (workspaceID: string, returnUrl: string) =
 }, "sessionUrl")
 
 export function BillingSection() {
-  const params = useParams()
+  const workspaceId = useWorkspaceId()
   // ORIGINAL CODE - COMMENTED OUT FOR TESTING
-  const balanceInfo = createAsync(() => queryBillingInfo(params.id))
+  const balanceInfo = createAsync(() => queryBillingInfo(workspaceId))
   const createCheckoutUrlAction = useAction(createCheckoutUrl)
   const createCheckoutUrlSubmission = useSubmission(createCheckoutUrl)
   const createSessionUrlAction = useAction(createSessionUrl)
@@ -100,7 +101,7 @@ export function BillingSection() {
                 disabled={createCheckoutUrlSubmission.pending}
                 onClick={async () => {
                   const baseUrl = window.location.href
-                  const checkoutUrl = await createCheckoutUrlAction(params.id, baseUrl, baseUrl)
+                  const checkoutUrl = await createCheckoutUrlAction(workspaceId, baseUrl, baseUrl)
                   if (checkoutUrl) {
                     window.location.href = checkoutUrl
                   }
@@ -137,7 +138,7 @@ export function BillingSection() {
                   disabled={createSessionUrlSubmission.pending}
                   onClick={async () => {
                     const baseUrl = window.location.href
-                    const sessionUrl = await createSessionUrlAction(params.id, baseUrl)
+                    const sessionUrl = await createSessionUrlAction(workspaceId, baseUrl)
                     if (sessionUrl) {
                       window.location.href = sessionUrl
                     }
@@ -156,7 +157,7 @@ export function BillingSection() {
             disabled={createCheckoutUrlSubmission.pending}
             onClick={async () => {
               const baseUrl = window.location.href
-              const checkoutUrl = await createCheckoutUrlAction(params.id, baseUrl, baseUrl)
+              const checkoutUrl = await createCheckoutUrlAction(workspaceId, baseUrl, baseUrl)
               if (checkoutUrl) {
                 window.location.href = checkoutUrl
               }

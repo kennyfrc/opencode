@@ -4,6 +4,7 @@ import { createMemo, For, Show } from "solid-js"
 import { formatDateUTC, formatDateForTable } from "../common"
 import { withActor } from "~/context/auth.withActor"
 import styles from "./usage-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getUsageInfo = query(async (workspaceID: string) => {
   "use server"
@@ -13,9 +14,9 @@ const getUsageInfo = query(async (workspaceID: string) => {
 }, "usage.list")
 
 export function UsageSection() {
-  const params = useParams()
+  const workspaceId = useWorkspaceId()
   // ORIGINAL CODE - COMMENTED OUT FOR TESTING
-  const usage = createAsync(() => getUsageInfo(params.id))
+  const usage = createAsync(() => getUsageInfo(workspaceId))
 
   // DUMMY DATA FOR TESTING
   // const usage = () => [

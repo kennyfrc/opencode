@@ -6,6 +6,7 @@ import { ZenData } from "@opencode-ai/console-core/model.js"
 import styles from "./model-section.module.css"
 import { querySessionInfo } from "../common"
 import { IconAlibaba, IconAnthropic, IconMoonshotAI, IconOpenAI, IconStealth, IconXai, IconZai } from "~/component/icon"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getModelLab = (modelId: string) => {
   if (modelId.startsWith("claude")) return "Anthropic"
@@ -51,9 +52,9 @@ const updateModel = action(async (form: FormData) => {
 }, "model.toggle")
 
 export function ModelSection() {
-  const params = useParams()
-  const modelsInfo = createAsync(() => getModelsInfo(params.id))
-  const userInfo = createAsync(() => querySessionInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const modelsInfo = createAsync(() => getModelsInfo(workspaceId))
+  const userInfo = createAsync(() => querySessionInfo(workspaceId))
 
   const modelsWithLab = createMemo(() => {
     const info = modelsInfo()
@@ -115,7 +116,7 @@ export function ModelSection() {
                         <td data-slot="model-toggle">
                           <form action={updateModel} method="post">
                             <input type="hidden" name="model" value={id} />
-                            <input type="hidden" name="workspaceID" value={params.id} />
+                            <input type="hidden" name="workspaceID" value={workspaceId} />
                             <input type="hidden" name="enabled" value={isEnabled().toString()} />
                             <label data-slot="model-toggle-label">
                               <input

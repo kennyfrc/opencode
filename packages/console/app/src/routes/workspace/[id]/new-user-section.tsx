@@ -5,6 +5,7 @@ import { Key } from "@opencode-ai/console-core/key.js"
 import { Billing } from "@opencode-ai/console-core/billing.js"
 import { withActor } from "~/context/auth.withActor"
 import styles from "./new-user-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getUsageInfo = query(async (workspaceID: string) => {
   "use server"
@@ -19,10 +20,10 @@ const listKeys = query(async (workspaceID: string) => {
 }, "key.list")
 
 export function NewUserSection() {
-  const params = useParams()
+  const workspaceId = useWorkspaceId()
   const [copiedKey, setCopiedKey] = createSignal(false)
-  const keys = createAsync(() => listKeys(params.id))
-  const usage = createAsync(() => getUsageInfo(params.id))
+  const keys = createAsync(() => listKeys(workspaceId))
+  const usage = createAsync(() => getUsageInfo(workspaceId))
   const isNew = createMemo(() => {
     const keysList = keys()
     const usageList = usage()

@@ -4,6 +4,7 @@ import { Provider } from "@opencode-ai/console-core/provider.js"
 import { withActor } from "~/context/auth.withActor"
 import { createStore } from "solid-js/store"
 import styles from "./provider-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const PROVIDERS = [
   { name: "OpenAI", key: "openai", prefix: "sk-" },
@@ -51,8 +52,8 @@ const listProviders = query(async (workspaceID: string) => {
 }, "provider.list")
 
 function ProviderRow(props: { provider: Provider }) {
-  const params = useParams()
-  const providers = createAsync(() => listProviders(params.id))
+  const workspaceId = useWorkspaceId()
+  const providers = createAsync(() => listProviders(workspaceId))
   const saveSubmission = useSubmission(saveProvider, ([fd]) => fd.get("provider")?.toString() === props.provider.key)
   const removeSubmission = useSubmission(
     removeProvider,
@@ -107,7 +108,7 @@ function ProviderRow(props: { provider: Provider }) {
               </Show>
             </div>
             <input type="hidden" name="provider" value={props.provider.key} />
-            <input type="hidden" name="workspaceID" value={params.id} />
+            <input type="hidden" name="workspaceID" value={workspaceId} />
           </form>
         </Show>
       </td>
@@ -129,7 +130,7 @@ function ProviderRow(props: { provider: Provider }) {
                 </button>
                 <form action={removeProvider} method="post" data-slot="delete-form">
                   <input type="hidden" name="provider" value={props.provider.key} />
-                  <input type="hidden" name="workspaceID" value={params.id} />
+                  <input type="hidden" name="workspaceID" value={workspaceId} />
                   <button data-color="ghost" type="submit" disabled={removeSubmission.pending}>
                     Delete
                   </button>

@@ -5,11 +5,12 @@ import { PaymentSection } from "./payment-section"
 import { Show } from "solid-js"
 import { createAsync, useParams } from "@solidjs/router"
 import { queryBillingInfo, querySessionInfo } from "../../common"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 export default function () {
-  const params = useParams()
-  const userInfo = createAsync(() => querySessionInfo(params.id))
-  const billingInfo = createAsync(() => queryBillingInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const userInfo = createAsync(() => querySessionInfo(workspaceId))
+  const billingInfo = createAsync(() => queryBillingInfo(workspaceId))
 
   return (
     <div data-page="workspace-[id]">

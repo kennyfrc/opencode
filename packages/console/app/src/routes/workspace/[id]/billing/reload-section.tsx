@@ -5,6 +5,7 @@ import { Billing } from "@opencode-ai/console-core/billing.js"
 import { Database, eq } from "@opencode-ai/console-core/drizzle/index.js"
 import { BillingTable } from "@opencode-ai/console-core/schema/billing.sql.js"
 import styles from "./reload-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const reload = action(async (form: FormData) => {
   "use server"
@@ -49,8 +50,8 @@ const getBillingInfo = query(async (workspaceID: string) => {
 }, "billing.get")
 
 export function ReloadSection() {
-  const params = useParams()
-  const balanceInfo = createAsync(() => getBillingInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const balanceInfo = createAsync(() => getBillingInfo(workspaceId))
   const setReloadSubmission = useSubmission(setReload)
   const reloadSubmission = useSubmission(reload)
 
@@ -71,7 +72,7 @@ export function ReloadSection() {
             </p>
           </Show>
           <form action={setReload} method="post" data-slot="create-form">
-            <input type="hidden" name="workspaceID" value={params.id} />
+            <input type="hidden" name="workspaceID" value={workspaceId} />
             <input type="hidden" name="reload" value={balanceInfo()?.reload ? "false" : "true"} />
             <button data-color="primary" type="submit" disabled={setReloadSubmission.pending}>
               <Show
@@ -100,7 +101,7 @@ export function ReloadSection() {
               method and try again.
             </p>
             <form action={reload} method="post" data-slot="create-form">
-              <input type="hidden" name="workspaceID" value={params.id} />
+              <input type="hidden" name="workspaceID" value={workspaceId} />
               <button data-color="ghost" type="submit" disabled={reloadSubmission.pending}>
                 {reloadSubmission.pending ? "Retrying..." : "Retry"}
               </button>

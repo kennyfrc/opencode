@@ -6,6 +6,7 @@ import { Workspace } from "@opencode-ai/console-core/workspace.js"
 import styles from "./settings-section.module.css"
 import { Database, eq } from "@opencode-ai/console-core/drizzle/index.js"
 import { WorkspaceTable } from "@opencode-ai/console-core/schema/workspace.sql.js"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getWorkspaceInfo = query(async (workspaceID: string) => {
   "use server"
@@ -45,8 +46,8 @@ const updateWorkspace = action(async (form: FormData) => {
 }, "workspace.update")
 
 export function SettingsSection() {
-  const params = useParams()
-  const workspaceInfo = createAsync(() => getWorkspaceInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const workspaceInfo = createAsync(() => getWorkspaceInfo(workspaceId))
   const submission = useSubmission(updateWorkspace)
   const [store, setStore] = createStore({ show: false })
 
@@ -94,7 +95,7 @@ export function SettingsSection() {
                     placeholder="Workspace name"
                     value={workspaceInfo()?.name ?? "Default"}
                   />
-                  <input type="hidden" name="workspaceID" value={params.id} />
+                  <input type="hidden" name="workspaceID" value={workspaceId} />
                   <button type="submit" data-color="primary" disabled={submission.pending}>
                     {submission.pending ? "Updating..." : "Save"}
                   </button>

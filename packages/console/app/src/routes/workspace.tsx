@@ -7,6 +7,7 @@ import { withActor } from "~/context/auth.withActor"
 import { User } from "@opencode-ai/console-core/user.js"
 import { Actor } from "@opencode-ai/console-core/actor.js"
 import { Link } from "@solidjs/meta"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getUserEmail = query(async (workspaceID: string) => {
   "use server"
@@ -18,8 +19,8 @@ const getUserEmail = query(async (workspaceID: string) => {
 }, "userEmail")
 
 export default function WorkspaceLayout(props: RouteSectionProps) {
-  const params = useParams()
-  const userEmail = createAsync(() => getUserEmail(params.id))
+  const workspaceId = useWorkspaceId()
+  const userEmail = createAsync(() => getUserEmail(workspaceId))
   return (
     <main data-page="workspace">
       <Link rel="icon" type="image/svg+xml" href="/favicon-zen.svg" />

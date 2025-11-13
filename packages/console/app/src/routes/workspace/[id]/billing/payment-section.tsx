@@ -4,6 +4,7 @@ import { For, Show } from "solid-js"
 import { withActor } from "~/context/auth.withActor"
 import { formatDateUTC, formatDateForTable } from "../../common"
 import styles from "./payment-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getPaymentsInfo = query(async (workspaceID: string) => {
   "use server"
@@ -18,8 +19,8 @@ const downloadReceipt = action(async (workspaceID: string, paymentID: string) =>
 }, "receipt.download")
 
 export function PaymentSection() {
-  const params = useParams()
-  const payments = createAsync(() => getPaymentsInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const payments = createAsync(() => getPaymentsInfo(workspaceId))
   const downloadReceiptAction = useAction(downloadReceipt)
 
   // DUMMY DATA FOR TESTING
@@ -89,7 +90,7 @@ export function PaymentSection() {
                       <td data-slot="payment-receipt">
                         <button
                           onClick={async () => {
-                            const receiptUrl = await downloadReceiptAction(params.id, payment.paymentID!)
+                            const receiptUrl = await downloadReceiptAction(workspaceId, payment.paymentID!)
                             if (receiptUrl) {
                               window.open(receiptUrl, "_blank")
                             }

@@ -6,11 +6,12 @@ import { IconLogo } from "~/component/icon"
 import { createAsync, useParams, useAction, useSubmission } from "@solidjs/router"
 import { querySessionInfo, queryBillingInfo, createCheckoutUrl } from "../common"
 import { Show, createMemo } from "solid-js"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 export default function () {
-  const params = useParams()
-  const userInfo = createAsync(() => querySessionInfo(params.id))
-  const billingInfo = createAsync(() => queryBillingInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const userInfo = createAsync(() => querySessionInfo(workspaceId))
+  const billingInfo = createAsync(() => queryBillingInfo(workspaceId))
   const createCheckoutUrlAction = useAction(createCheckoutUrl)
   const createCheckoutUrlSubmission = useSubmission(createCheckoutUrl)
 
@@ -41,7 +42,7 @@ export default function () {
                     disabled={createCheckoutUrlSubmission.pending}
                     onClick={async () => {
                       const baseUrl = window.location.href
-                      const checkoutUrl = await createCheckoutUrlAction(params.id, baseUrl, baseUrl)
+                      const checkoutUrl = await createCheckoutUrlAction(workspaceId, baseUrl, baseUrl)
                       if (checkoutUrl) {
                         window.location.href = checkoutUrl
                       }

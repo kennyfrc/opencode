@@ -7,6 +7,7 @@ import { UserRole } from "@opencode-ai/console-core/schema/user.sql.js"
 import { Actor } from "@opencode-ai/console-core/actor.js"
 import { User } from "@opencode-ai/console-core/user.js"
 import { RoleDropdown } from "./role-dropdown"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const listMembers = query(async (workspaceID: string) => {
   "use server"
@@ -208,8 +209,8 @@ const roleOptions = [
 ]
 
 export function MemberSection() {
-  const params = useParams()
-  const data = createAsync(() => listMembers(params.id))
+  const workspaceId = useWorkspaceId()
+  const data = createAsync(() => listMembers(workspaceId))
   const submission = useSubmission(inviteMember)
   const [store, setStore] = createStore({
     show: false,
@@ -298,7 +299,7 @@ export function MemberSection() {
             {(err) => <div data-slot="form-error">{err()}</div>}
           </Show>
           <input type="hidden" name="role" value={store.selectedRole} />
-          <input type="hidden" name="workspaceID" value={params.id} />
+          <input type="hidden" name="workspaceID" value={workspaceId} />
           <div data-slot="form-actions">
             <button type="reset" data-color="ghost" onClick={() => hide()}>
               Cancel
@@ -328,7 +329,7 @@ export function MemberSection() {
                 {(member) => (
                   <MemberRow
                     member={member}
-                    workspaceID={params.id}
+                    workspaceID={workspaceId}
                     actorID={data()!.actorID}
                     actorRole={data()!.actorRole}
                   />

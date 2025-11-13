@@ -7,6 +7,7 @@ import { createStore } from "solid-js/store"
 import { formatDateUTC, formatDateForTable } from "../../common"
 import styles from "./key-section.module.css"
 import { Actor } from "@opencode-ai/console-core/actor.js"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const removeKey = action(async (form: FormData) => {
   "use server"
@@ -44,8 +45,8 @@ const listKeys = query(async (workspaceID: string) => {
 }, "key.list")
 
 export function KeySection() {
-  const params = useParams()
-  const keys = createAsync(() => listKeys(params.id))
+  const workspaceId = useWorkspaceId()
+  const keys = createAsync(() => listKeys(workspaceId))
   const submission = useSubmission(createKey)
   const [store, setStore] = createStore({ show: false })
 
@@ -95,7 +96,7 @@ export function KeySection() {
               {(err) => <div data-slot="form-error">{err()}</div>}
             </Show>
           </div>
-          <input type="hidden" name="workspaceID" value={params.id} />
+          <input type="hidden" name="workspaceID" value={workspaceId} />
           <div data-slot="form-actions">
             <button type="reset" data-color="ghost" onClick={() => hide()}>
               Cancel
@@ -159,7 +160,7 @@ export function KeySection() {
                       <td data-slot="key-actions">
                         <form action={removeKey} method="post">
                           <input type="hidden" name="id" value={key.id} />
-                          <input type="hidden" name="workspaceID" value={params.id} />
+                          <input type="hidden" name="workspaceID" value={workspaceId} />
                           <button data-color="ghost">Delete</button>
                         </form>
                       </td>

@@ -4,6 +4,7 @@ import { createStore } from "solid-js/store"
 import { withActor } from "~/context/auth.withActor"
 import { Billing } from "@opencode-ai/console-core/billing.js"
 import styles from "./monthly-limit-section.module.css"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 
 const getBillingInfo = query(async (workspaceID: string) => {
   "use server"
@@ -33,10 +34,10 @@ const setMonthlyLimit = action(async (form: FormData) => {
 }, "billing.setMonthlyLimit")
 
 export function MonthlyLimitSection() {
-  const params = useParams()
+  const workspaceId = useWorkspaceId()
   const submission = useSubmission(setMonthlyLimit)
   const [store, setStore] = createStore({ show: false })
-  const balanceInfo = createAsync(() => getBillingInfo(params.id))
+  const balanceInfo = createAsync(() => getBillingInfo(workspaceId))
 
   let input: HTMLInputElement
 
@@ -93,7 +94,7 @@ export function MonthlyLimitSection() {
                     {(err) => <div data-slot="form-error">{err()}</div>}
                   </Show>
                 </div>
-                <input type="hidden" name="workspaceID" value={params.id} />
+                <input type="hidden" name="workspaceID" value={workspaceId} />
                 <div data-slot="form-actions">
                   <button type="reset" data-color="ghost" onClick={() => hide()}>
                     Cancel

@@ -1,11 +1,12 @@
 import { Show } from "solid-js"
 import { createAsync, RouteSectionProps, useParams, A } from "@solidjs/router"
 import { querySessionInfo } from "./common"
+import { useWorkspaceId } from "~/lib/useWorkspaceId"
 import "./[id].css"
 
 export default function WorkspaceLayout(props: RouteSectionProps) {
-  const params = useParams()
-  const userInfo = createAsync(() => querySessionInfo(params.id))
+  const workspaceId = useWorkspaceId()
+  const userInfo = createAsync(() => querySessionInfo(workspaceId))
 
   return (
     <main data-page="workspace">
@@ -13,20 +14,20 @@ export default function WorkspaceLayout(props: RouteSectionProps) {
         <nav data-component="workspace-nav">
           <nav data-component="nav-desktop">
             <div data-component="workspace-nav-items">
-              <A href={`/workspace/${params.id}`} end activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}`} end activeClass="active" data-nav-button>
                 Zen
               </A>
-              <A href={`/workspace/${params.id}/keys`} activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}/keys`} activeClass="active" data-nav-button>
                 API Keys
               </A>
-              <A href={`/workspace/${params.id}/members`} activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}/members`} activeClass="active" data-nav-button>
                 Members
               </A>
               <Show when={userInfo()?.isAdmin}>
-                <A href={`/workspace/${params.id}/billing`} activeClass="active" data-nav-button>
+                <A href={`/workspace/${workspaceId}/billing`} activeClass="active" data-nav-button>
                   Billing
                 </A>
-                <A href={`/workspace/${params.id}/settings`} activeClass="active" data-nav-button>
+                <A href={`/workspace/${workspaceId}/settings`} activeClass="active" data-nav-button>
                   Settings
                 </A>
               </Show>
@@ -35,20 +36,20 @@ export default function WorkspaceLayout(props: RouteSectionProps) {
 
           <nav data-component="nav-mobile">
             <div data-component="workspace-nav-items">
-              <A href={`/workspace/${params.id}`} end activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}`} end activeClass="active" data-nav-button>
                 Zen
               </A>
-              <A href={`/workspace/${params.id}/keys`} activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}/keys`} activeClass="active" data-nav-button>
                 API Keys
               </A>
-              <A href={`/workspace/${params.id}/members`} activeClass="active" data-nav-button>
+              <A href={`/workspace/${workspaceId}/members`} activeClass="active" data-nav-button>
                 Members
               </A>
               <Show when={userInfo()?.isAdmin}>
-                <A href={`/workspace/${params.id}/billing`} activeClass="active" data-nav-button>
+                <A href={`/workspace/${workspaceId}/billing`} activeClass="active" data-nav-button>
                   Billing
                 </A>
-                <A href={`/workspace/${params.id}/settings`} activeClass="active" data-nav-button>
+                <A href={`/workspace/${workspaceId}/settings`} activeClass="active" data-nav-button>
                   Settings
                 </A>
               </Show>
