@@ -10,14 +10,10 @@ NC='\033[0m' # No Color
 
 requested_version=${VERSION:-}
 
-raw_os=$(uname -s)
-os=$(echo "$raw_os" | tr '[:upper:]' '[:lower:]')
-# Normalize various Unix-like identifiers
-case "$raw_os" in
-  Darwin*) os="darwin" ;;
-  Linux*) os="linux" ;;
-  MINGW*|MSYS*|CYGWIN*) os="windows" ;;
- esac
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+if [[ "$os" == "darwin" ]]; then
+    os="darwin"
+fi
 arch=$(uname -m)
 
 if [[ "$arch" == "aarch64" ]]; then
@@ -46,18 +42,16 @@ case "$filename" in
 esac
 
 INSTALL_DIR=$HOME/.opencode/bin
+REPO_DIR=$HOME/.opencode/repo
 mkdir -p "$INSTALL_DIR"
 
-if [ -z "$requested_version" ]; then
-    url="https://github.com/sst/opencode/releases/latest/download/$filename"
-    specific_version=$(curl -s https://api.github.com/repos/sst/opencode/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+# Use dev branch from kennyfrc fork
+repo_url="https://github.com/kennyfrc/opencode.git"
+branch="dev"
 
-    if [[ $? -ne 0 || -z "$specific_version" ]]; then
-        echo -e "${RED}Failed to fetch version information${NC}"
-        exit 1
-    fi
+if [ -z "$requested_version" ]; then
+    specific_version="dev"
 else
-    url="https://github.com/sst/opencode/releases/download/v${requested_version}/$filename"
     specific_version=$requested_version
 fi
 
@@ -79,29 +73,59 @@ check_version() {
     if command -v opencode >/dev/null 2>&1; then
         opencode_path=$(which opencode)
 
-
-        ## TODO: check if version is installed
-        # installed_version=$(opencode version)
-        installed_version="0.0.1"
-        installed_version=$(echo $installed_version | awk '{print $2}')
-
-        if [[ "$installed_version" != "$specific_version" ]]; then
-            print_message info "Installed version: ${YELLOW}$installed_version."
-        else
-            print_message info "Version ${YELLOW}$specific_version${GREEN} already installed"
+        # Check if it's our dev version by looking for the repo directory
+        if [ -d "$REPO_DIR" ] && [ -f "$INSTALL_DIR/opencode" ]; then
+            print_message info "Dev version from kennyfrc fork already installed"
+            print_message info "To update, run this installer again"
             exit 0
+        else
+            print_message info "Found different opencode installation at: $opencode_path"
+            print_message warning "This will install alongside the existing version"
         fi
     fi
 }
 
 download_and_install() {
-    print_message info "Downloading ${ORANGE}opencode ${GREEN}version: ${YELLOW}$specific_version ${GREEN}..."
-    mkdir -p opencodetmp && cd opencodetmp
-    curl -# -L -o "$filename" "$url"
-    unzip -q "$filename"
-    mv opencode "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/opencode"
-    cd .. && rm -rf opencodetmp
+    print_message info "Cloning ${ORANGE}opencode ${GREEN}from kennyfrc fork, branch: ${YELLOW}$branch ${GREEN}..."
+
+    # Remove existing repo if it exists
+    if [ -d "$REPO_DIR" ]; then
+        rm -rf "$REPO_DIR"
+    fi
+
+    # Clone the repository
+    if ! git clone --branch "$branch" --depth 1 "$repo_url" "$REPO_DIR" 2>/dev/null; then
+        print_message error "Failed to clone repository"
+        exit 1
+    fi
+
+    # Install dependencies and build
+    cd "$REPO_DIR"
+    if ! command -v bun >/dev/null 2>&1; then
+        print_message error "Bun is required but not installed. Please install Bun first: https://bun.sh"
+        exit 1
+    fi
+
+    print_message info "Installing dependencies..."
+    if ! bun install >/dev/null 2>&1; then
+        print_message error "Failed to install dependencies"
+        exit 1
+    fi
+
+    # Copy apply_patch.py to bin directory
+    cp apply_patch.py "$INSTALL_DIR/apply_patch"
+    chmod +x "$INSTALL_DIR/apply_patch"
+
+    # Create executable script
+    cat > "$INSTALL_DIR/opencode" << 'EOS'
+#!/usr/bin/env bash
+# Run opencode from the repo directory using absolute path
+bun run --conditions=development "$HOME/.opencode/repo/packages/opencode/src/index.ts" "$@"
+EOS
+
+    chmod +x "$INSTALL_DIR/opencode"
+    print_message info "Successfully installed opencode from dev branch!"
+    print_message info "Both opencode and apply_patch are available in your PATH!"
 }
 
 check_version
@@ -187,7 +211,38 @@ if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     esac
 fi
 
+# Also add .opencode directory to PATH for apply_patch.py
+OPENCODE_DIR=$HOME/.opencode
+if [[ ":$PATH:" != *":$OPENCODE_DIR:"* ]]; then
+    case $current_shell in
+        fish)
+            add_to_path "$config_file" "fish_add_path $OPENCODE_DIR"
+        ;;
+        zsh)
+            add_to_path "$config_file" "export PATH=$OPENCODE_DIR:\$PATH"
+        ;;
+        bash)
+            add_to_path "$config_file" "export PATH=$OPENCODE_DIR:\$PATH"
+        ;;
+        ash)
+            add_to_path "$config_file" "export PATH=$OPENCODE_DIR:\$PATH"
+        ;;
+        sh)
+            add_to_path "$config_file" "export PATH=$OPENCODE_DIR:\$PATH"
+        ;;
+        *)
+            export PATH=$OPENCODE_DIR:$PATH
+            print_message warning "Manually add the directory to $config_file (or similar):"
+            print_message info "  export PATH=$OPENCODE_DIR:\$PATH"
+        ;;
+    esac
+fi
+
 if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     echo "$INSTALL_DIR" >> $GITHUB_PATH
     print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
 fi
+
+print_message info "Installation complete!"
+print_message info "Run 'opencode' to start using your local dev version"
+print_message info "The source code is available at: $REPO_DIR"
