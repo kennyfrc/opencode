@@ -18,6 +18,23 @@
 
 ---
 
+### Development Setup (From Source)
+
+If you're working on this fork and want to run OpenCode directly from the repository:
+
+```bash
+# Add this function to your ~/.bashrc or ~/.zshrc
+opencode() {
+  local opencode_path="/path/to/your/opencode"
+  bun run --conditions=development "$opencode_path/packages/opencode/src/index.ts" "$@"
+}
+
+# Then reload your shell config:
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+This allows you to run `opencode <command>` using your local development version.
+
 ### Installation
 
 ```bash
