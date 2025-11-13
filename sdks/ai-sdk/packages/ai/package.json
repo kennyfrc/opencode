@@ -4,9 +4,9 @@
   "description": "AI SDK by Vercel - The AI Toolkit for TypeScript and JavaScript",
   "license": "Apache-2.0",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
     "dist/**/*",
     "CHANGELOG.md",
@@ -30,23 +30,9 @@
   },
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./internal": {
-      "types": "./dist/internal/index.d.ts",
-      "import": "./dist/internal/index.mjs",
-      "module": "./dist/internal/index.mjs",
-      "require": "./dist/internal/index.js"
-    },
-    "./test": {
-      "types": "./dist/test/index.d.ts",
-      "import": "./dist/test/index.mjs",
-      "module": "./dist/test/index.mjs",
-      "require": "./dist/test/index.js"
-    }
+    ".": "./src/index.ts",
+    "./internal": "./internal/index.ts",
+    "./test": "./test/index.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "workspace:*",
