@@ -127,10 +127,10 @@ export function convertToOpenAICompatibleChatMessages(
           content: assistantContent,
           tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
           ...metadata,
+          ...(trimmedReasoning && options?.reasoningFallback !== 'angle-brackets'
+            ? { reasoning_content: trimmedReasoning }
+            : {}),
         };
-        const includeReasoningField =
-          trimmedReasoning && options?.reasoningFallback !== 'angle-brackets';
-        if (includeReasoningField) assistantMessage.reasoning_content = trimmedReasoning;
 
         messages.push(assistantMessage);
 
