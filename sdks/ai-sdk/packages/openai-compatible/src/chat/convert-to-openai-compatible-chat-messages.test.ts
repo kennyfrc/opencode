@@ -244,6 +244,38 @@ describe('assistant reasoning serialization', () => {
       },
     ]);
   });
+
+  it('should omit reasoningFallback metadata while still inlining reasoning', () => {
+    const result = convertToOpenAICompatibleChatMessages(
+      [
+        {
+          role: 'assistant',
+          providerOptions: {
+            openaiCompatible: {
+              reasoningFallback: 'angle-brackets',
+              cacheControl: { type: 'ephemeral' },
+            },
+          },
+          content: [
+            { type: 'reasoning', text: 'Trace steps.' },
+            { type: 'text', text: 'Final answer.' },
+          ],
+        },
+      ],
+      {
+        reasoningFallback: 'angle-brackets',
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '<think>Trace steps.</think>Final answer.',
+        cacheControl: { type: 'ephemeral' },
+      },
+    ]);
+    expect(result[0]).not.toHaveProperty('reasoningFallback');
+  });
 });
 
 describe('provider-specific metadata merging', () => {

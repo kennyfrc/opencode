@@ -12,7 +12,9 @@ import { convertToBase64 } from '@ai-sdk/provider-utils';
 function getOpenAIMetadata(message: {
   providerOptions?: SharedV3ProviderMetadata;
 }) {
-  return message?.providerOptions?.openaiCompatible ?? {};
+  const { reasoningFallback: _ignored, ...metadata } =
+    message?.providerOptions?.openaiCompatible ?? {};
+  return metadata;
 }
 
 type ConvertToOpenAICompatibleChatMessagesOptions = {

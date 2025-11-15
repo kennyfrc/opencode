@@ -260,6 +260,42 @@ describe('doGenerate', () => {
     expect(body.messages[1].reasoning_content).toBeUndefined();
   });
 
+  it('should exclude reasoningFallback metadata from serialized assistant messages', async () => {
+    prepareJsonResponse({ content: 'Done' });
+
+    await model.doGenerate({
+      prompt: [
+        { role: 'user', content: [{ type: 'text', text: 'Explain briefly.' }] },
+        {
+          role: 'assistant',
+          providerOptions: {
+            openaiCompatible: {
+              reasoningFallback: 'angle-brackets',
+              cacheControl: { type: 'session' },
+            },
+          },
+          content: [
+            { type: 'reasoning', text: 'Collect points.' },
+            { type: 'text', text: 'Answer.' },
+          ],
+        },
+      ],
+      providerOptions: {
+        'test-provider': {
+          reasoningFallback: 'angle-brackets',
+        },
+      },
+    });
+
+    const body = await server.calls[0].requestBodyJson;
+    expect(body.messages[1]).toMatchObject({
+      role: 'assistant',
+      content: '<think>Collect points.</think>Answer.',
+      cacheControl: { type: 'session' },
+    });
+    expect(body.messages[1].reasoningFallback).toBeUndefined();
+  });
+
   it('should extract reasoning from reasoning field when reasoning_content is not provided', async () => {
     prepareJsonResponse({
       content: 'Hello, World!',
