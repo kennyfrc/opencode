@@ -10,8 +10,8 @@
 <p align="center">The AI coding agent built for the terminal.</p>
 <p align="center">
   <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/sst/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/sst/opencode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://www.npmjs.com/package/opencode-fork"><img alt="npm" src="https://img.shields.io/npm/v/opencode-fork?style=flat-square" /></a>
+  <a href="https://github.com/kennyfrc/opencode/actions/workflows/test.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/kennyfrc/opencode/test.yml?style=flat-square&branch=dev" /></a>
 </p>
 
 [![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
@@ -38,11 +38,11 @@ This allows you to run `opencode <command>` using your local development version
 ### Installation
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+# Development installation
+bun install -g ./
 
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
+# Package managers (when published)
+npm i -g opencode-fork@latest        # or bun/pnpm/yarn
 scoop bucket add extras; scoop install extras/opencode  # Windows
 choco install opencode             # Windows
 brew install sst/tap/opencode      # macOS and Linux
