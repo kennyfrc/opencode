@@ -8,12 +8,12 @@ organization:
 targets:
   typescript:
     package_name: "@opencode-ai/sdk"
-    production_repo: "sst/opencode-sdk-js"
+    production_repo: "kennyfrc/opencode-sdk-js"
     publish:
       npm: true
   go:
     package_name: opencode
-    production_repo: sst/opencode-sdk-go
+    production_repo: kennyfrc/opencode-sdk-go
 
 environments:
   production: http://localhost:54321

@@ -54,7 +54,7 @@ export default function Home() {
             <div data-slot="hero-copy">
               <a
                 data-slot="releases"
-                href={release()?.url ?? "https://github.com/sst/opencode/releases"}
+                href={release()?.url ?? "https://github.com/kennyfrc/opencode/releases"}
                 target="_blank"
               >
                 What’s new in {release()?.name ?? "the latest release"}
@@ -688,11 +688,11 @@ export default function Home() {
               <li>
                 <Faq question="Is OpenCode open source?">
                   Yes, OpenCode is fully open source. The source code is public on{" "}
-                  <a href="https://github.com/sst/opencode" target="_blank">
+                  <a href="https://github.com/kennyfrc/opencode" target="_blank">
                     GitHub
                   </a>{" "}
                   under the{" "}
-                  <a href="https://github.com/sst/opencode?tab=MIT-1-ov-file#readme" target="_blank">
+                  <a href="https://github.com/kennyfrc/opencode?tab=MIT-1-ov-file#readme" target="_blank">
                     MIT License
                   </a>
                   , meaning anyone can use, modify, or contribute to its development. Anyone from the community can file
