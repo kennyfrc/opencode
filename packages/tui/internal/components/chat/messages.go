@@ -375,7 +375,7 @@ func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, head
 				suffix := ansi.Cut(line, left+ansi.StringWidth(middle), width)
 				clipboard = append(clipboard, middle)
 				line = prefix + styles.NewStyle().
-					Background(t.Accent()).
+					Background(t.TextMuted()).
 					Foreground(t.BackgroundPanel()).
 					Render(ansi.Strip(middle)) +
 					suffix
@@ -645,7 +645,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 									mediaType = "txt"
 								case "image/png", "image/jpeg", "image/gif", "image/webp":
 									mediaType = "img"
-									mediaTypeStyle = mediaTypeStyle.Background(t.Accent())
+									mediaTypeStyle = mediaTypeStyle.Background(t.TextMuted())
 								case "application/pdf":
 									mediaType = "pdf"
 									mediaTypeStyle = mediaTypeStyle.Background(t.Primary())
@@ -834,17 +834,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 						if content != "" {
 							partCount++
 							lineCount += lipgloss.Height(content) + 1
-							index := len(blocks)
 							blocks = append(blocks, content)
-							if part.State.Status == opencode.ToolPartStateStatusPending {
-								key := shimmerKey(shimmerBlockTool, part.ID)
-								shimmerBlocks[key] = shimmerBlock{
-									index:     index,
-									kind:      shimmerBlockTool,
-									messageID: casted.ID,
-									partID:    part.ID,
-								}
-							}
 							hasContent = true
 						}
 					case opencode.ReasoningPart:
@@ -1095,7 +1085,7 @@ func (m *messagesComponent) renderHeader() string {
 	isChildSession := m.app.Session.ParentID != ""
 	if isChildSession {
 		bgColor = t.BackgroundElement()
-		borderColor = t.Accent()
+		borderColor = t.TextMuted()
 	}
 
 	base := styles.NewStyle().Foreground(t.Text()).Background(bgColor).Render

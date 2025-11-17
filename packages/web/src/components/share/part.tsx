@@ -396,24 +396,15 @@ export function TodoWriteTool(props: ToolProps) {
   const starting = () => todos().every((t: Todo) => t.status === "pending")
   const finished = () => todos().every((t: Todo) => t.status === "completed")
 
-  // Determine status key for CSS animation
-  const getPlanStatus = () => {
-    if (starting()) return "starting"
-    if (finished()) return "completed"
-    return "updating"
-  }
-
-  // Get base label without ellipsis (CSS will add animation)
-  const getBaseLabel = () => {
-    if (starting()) return "Creating plan"
-    if (finished()) return "Plan completed"
-    return "Updating plan"
-  }
-
   return (
     <>
-      <div data-component="tool-title" data-plan-status={getPlanStatus()}>
-        <span data-slot="name">{getBaseLabel()}</span>
+      <div data-component="tool-title">
+        <span data-slot="name">
+          <Switch fallback="Updating plan...">
+            <Match when={starting()}>Creating plan...</Match>
+            <Match when={finished()}>Completing plan...</Match>
+          </Switch>
+        </span>
       </div>
       <Show when={todos().length > 0}>
         <ul data-component="todos">

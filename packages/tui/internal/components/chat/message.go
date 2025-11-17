@@ -239,7 +239,7 @@ func renderText(
 		if isThinking {
 			var label string
 			if shimmer {
-				label = util.Shimmer("Thinking...", backgroundColor, t.TextMuted(), t.Accent())
+				label = util.Shimmer("Thinking...", backgroundColor, t.TextMuted(), t.TextMuted())
 			} else {
 				label = styles.NewStyle().Background(backgroundColor).Foreground(t.TextMuted()).Render("Thinking...")
 			}
@@ -348,7 +348,7 @@ func renderText(
 		wrappedText = strings.ReplaceAll(wrappedText, "\u2011", "-")
 		content = base.Width(width - 6).Render(wrappedText)
 		if isQueued {
-			queuedStyle := styles.NewStyle().Background(t.Accent()).Foreground(t.BackgroundPanel()).Bold(true).Padding(0, 1)
+			queuedStyle := styles.NewStyle().Background(t.TextMuted()).Foreground(t.BackgroundPanel()).Bold(true).Padding(0, 1)
 			content = queuedStyle.Render("QUEUED") + "\n\n" + content
 		}
 	}
@@ -422,7 +422,7 @@ func renderText(
 	case opencode.UserMessage:
 		borderColor := t.Secondary()
 		if isQueued {
-			borderColor = t.Accent()
+			borderColor = t.TextMuted()
 		}
 		return renderContentBlock(
 			app,
@@ -813,7 +813,7 @@ func renderToolTitle(
 	if toolCall.State.Status == opencode.ToolPartStateStatusPending {
 		title := renderToolAction(toolCall.Tool)
 		t := theme.CurrentTheme()
-		shiny := util.Shimmer(title, t.BackgroundPanel(), t.TextMuted(), t.Accent())
+		shiny := util.Shimmer(title, t.BackgroundPanel(), t.TextMuted(), t.Text())
 		return styles.NewStyle().Background(t.BackgroundPanel()).Width(width - 6).Render(shiny)
 	}
 
@@ -884,47 +884,31 @@ func renderToolTitle(
 }
 
 func renderToolAction(name string) string {
-	// Make the status content change over time for shimmer to work
-	frameDuration := int64(200) // milliseconds per frame - faster than shimmer
-	frame := (time.Now().UnixMilli() / frameDuration) % 4
-	
-	var dots string
-	switch frame {
-	case 0:
-		dots = ""
-	case 1:
-		dots = "."
-	case 2:
-		dots = ".."
-	case 3:
-		dots = "..."
-	}
-	
 	switch name {
 	case "task":
-		return "Delegating" + dots
+		return "Delegating..."
 	case "bash":
-		return "Writing command" + dots
+		return "Writing command..."
 	case "edit":
-		return "Preparing edit" + dots
+		return "Preparing edit..."
 	case "webfetch":
-		return "Fetching from the web" + dots
+		return "Fetching from the web..."
 	case "glob":
-		return "Finding files" + dots
+		return "Finding files..."
 	case "grep":
-		return "Searching content" + dots
+		return "Searching content..."
 	case "list":
-		return "Listing directory" + dots
+		return "Listing directory..."
 	case "read":
-		return "Reading file" + dots
+		return "Reading file..."
 	case "write":
-		return "Preparing write" + dots
+		return "Preparing write..."
 	case "todowrite", "todoread":
-		return "Planning" + dots
+		return "Planning..."
 	case "patch":
-		return "Preparing patch" + dots
+		return "Preparing patch..."
 	}
-	return "Working" + dots
+	return "Working..."
 }
 
 func renderArgs(args *map[string]any, titleKey string) string {

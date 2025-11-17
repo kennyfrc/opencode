@@ -140,7 +140,7 @@
     [data-component="assistant-reasoning-markdown"] {
       align-self: flex-start;
       font-size: 0.75rem;
-      border: 1px solid var(--sl-color-blue-high);
+      border: 1px solid var(--sl-color-divider);
       padding: 0.5rem calc(0.5rem + 3px);
       border-radius: 0.25rem;
       position: relative;
@@ -158,7 +158,7 @@
     & > [data-component="assistant-text-markdown"] {
       align-self: flex-start;
       font-size: 0.875rem;
-      border: 1px solid var(--sl-color-blue-high);
+      border: 1px solid var(--sl-color-divider);
       padding: 0.5rem calc(0.5rem + 3px);
       border-radius: 0.25rem;
       position: relative;
@@ -362,7 +362,7 @@
         color: var(--sl-color-text);
 
         & > span {
-          border-color: var(--sl-color-orange);
+          border-color: var(--sl-color-divider);
         }
 
         & > span::before {
@@ -372,7 +372,7 @@
           left: 2px;
           width: calc(0.75rem - 2px - 4px);
           height: calc(0.75rem - 2px - 4px);
-          box-shadow: inset 1rem 1rem var(--sl-color-orange-low);
+          box-shadow: inset 1rem 1rem var(--sl-color-divider);
         }
       }
 
@@ -380,7 +380,7 @@
         color: var(--sl-color-text-secondary);
 
         & > span {
-          border-color: var(--sl-color-green-low);
+          border-color: var(--sl-color-divider);
         }
 
         & > span::before {
@@ -390,7 +390,7 @@
           left: 2px;
           width: calc(0.75rem - 2px - 4px);
           height: calc(0.75rem - 2px - 4px);
-          box-shadow: inset 1rem 1rem var(--sl-color-green);
+          box-shadow: inset 1rem 1rem var(--sl-color-divider);
 
           transform-origin: bottom left;
           clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);

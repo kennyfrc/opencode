@@ -354,7 +354,7 @@ func (m *editorComponent) Content() string {
 	prompt := promptStyle.Render(">")
 	borderForeground := t.Border()
 	if m.app.IsLeaderSequence {
-		borderForeground = t.Accent()
+		borderForeground = t.TextMuted()
 	}
 	if m.app.IsBashMode {
 		borderForeground = t.Secondary()

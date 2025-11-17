@@ -279,7 +279,7 @@ func (c *listComponent[T]) View() string {
 					t := theme.CurrentTheme()
 					truncatedStr := truncate.StringWithTail(string(headerItem), uint(maxWidth-1), "...")
 					headerStyle := c.baseStyle.
-						Foreground(t.Accent()).
+						Foreground(t.TextMuted()).
 						Bold(true).
 						MarginBottom(0).
 						PaddingLeft(1)
@@ -418,7 +418,7 @@ func (h HeaderItem) Render(selected bool, width int, baseStyle styles.Style) str
 	truncatedStr := truncate.StringWithTail(string(h), uint(width-1), "...")
 
 	headerStyle := baseStyle.
-		Foreground(t.Accent()).
+		Foreground(t.TextMuted()).
 		Bold(true).
 		MarginTop(1).
 		MarginBottom(0).
