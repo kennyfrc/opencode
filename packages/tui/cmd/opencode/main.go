@@ -4,10 +4,12 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	flag "github.com/spf13/pflag"
@@ -45,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Check if there's data piped to stdin
+	// Handle piped stdin data
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		stdin, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -63,13 +65,27 @@ func main() {
 		}
 	}
 
-	// Register custom SSE decoder to handle large events (>32MB)
-	// This is a workaround for the bufio.Scanner token size limit in the auto-generated SDK
-	// See: packages/tui/internal/decoders/decoder.go
+	// Workaround: custom SSE decoder handles events >32MB (beyond bufio.Scanner limit)
 	ssestream.RegisterDecoder("text/event-stream", decoders.NewUnboundedDecoder)
+
+	// Transport optimized for long-lived CLI connections
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableKeepAlives:   false,
+		TLSHandshakeTimeout: 10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	// Shared HTTP client - no timeout to allow indefinite SSE streaming
+	rawHTTPClient := &http.Client{
+		Transport: transport,
+	}
 
 	httpClient := opencode.NewClient(
 		option.WithBaseURL(url),
+		option.WithHTTPClient(rawHTTPClient),
 	)
 
 	var agents []opencode.Agent
@@ -125,7 +141,6 @@ func main() {
 		}
 	}()
 
-	// Create main context for the application
 	app_, err := app.New(ctx, version, project, path, agents, httpClient, model, prompt, agent, sessionID)
 	if err != nil {
 		panic(err)
@@ -138,7 +153,7 @@ func main() {
 		tea.WithMouseCellMotion(),
 	)
 
-	// Set up signal handling for graceful shutdown
+	// Graceful shutdown signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
@@ -156,15 +171,12 @@ func main() {
 
 	go api.Start(ctx, program, httpClient)
 
-	// Handle signals in a separate goroutine
 	go func() {
 		sig := <-sigChan
 		slog.Info("Received signal, shutting down gracefully", "signal", sig)
 		tuiModel.Cleanup()
 		program.Quit()
 	}()
-
-	// Run the TUI
 	result, err := program.Run()
 	if err != nil {
 		slog.Error("TUI error", "error", err)

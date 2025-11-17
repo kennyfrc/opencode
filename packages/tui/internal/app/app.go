@@ -51,6 +51,7 @@ type App struct {
 	Model             *opencode.Model
 	Session           *opencode.Session
 	Messages          []Message
+	messageIndex      map[string]int // Message ID → slice index mapping
 	MessagesPageSize  int
 	OldestMessageID   string
 	HasMoreHistory    bool
@@ -181,6 +182,9 @@ func New(
 		}
 	}
 	agent = &agents[agentIndex]
+	
+	// Initialize agent state for provider initialization
+	appState.Agent = agent.Name
 
 	if agent.Model.ModelID != "" {
 		appState.AgentModel[agent.Name] = AgentModel{
@@ -225,6 +229,7 @@ func New(
 		AgentIndex:       agentIndex,
 		Session:          &opencode.Session{},
 		Messages:         []Message{},
+		messageIndex:     make(map[string]int),
 		MessagesPageSize: defaultMessagesPageSize,
 		Commands:         commands.LoadFromConfig(configInfo, *customCommands),
 		InitialModel:     initialModel,
@@ -269,7 +274,7 @@ func SetClipboard(text string) tea.Cmd {
 		clipboard.Write(clipboard.FmtText, []byte(text))
 		return nil
 	})
-	// try to set the clipboard using OSC52 for terminals that support it
+	// OSC52 clipboard support for terminal compatibility
 	cmds = append(cmds, tea.SetClipboard(text))
 	return tea.Sequence(cmds...)
 }
@@ -281,7 +286,6 @@ func (a *App) updateModelForNewAgent() {
 	if isSingleModel {
 		return
 	}
-	// Set up model for the new agent
 	modelID := a.Agent().Model.ModelID
 	providerID := a.Agent().Model.ProviderID
 	if modelID == "" {
@@ -404,7 +408,6 @@ func (a *App) CycleRecentModelReverse() (*App, tea.Cmd) {
 }
 
 func (a *App) SwitchToAgent(agentName string) (*App, tea.Cmd) {
-	// Find the agent index by name
 	for i, agent := range a.Agents {
 		if agent.Name == agentName {
 			a.AgentIndex = i
@@ -419,7 +422,7 @@ func (a *App) SwitchToAgent(agentName string) (*App, tea.Cmd) {
 	return a, a.SaveState()
 }
 
-// findModelByFullID finds a model by its full ID in the format "provider/model"
+// findModelByFullID parses "provider/model" format
 func findModelByFullID(
 	providers []opencode.Provider,
 	fullModelID string,
@@ -435,7 +438,7 @@ func findModelByFullID(
 	return findModelByProviderAndModelID(providers, providerID, modelID)
 }
 
-// findModelByProviderAndModelID finds a model by provider ID and model ID
+// findModelByProviderAndModelID locates model by provider+model IDs
 func findModelByProviderAndModelID(
 	providers []opencode.Provider,
 	providerID, modelID string,
@@ -451,15 +454,13 @@ func findModelByProviderAndModelID(
 			}
 		}
 
-		// Provider found but model not found
 		return nil, nil
 	}
 
-	// Provider not found
 	return nil, nil
 }
 
-// findProviderByID finds a provider by its ID
+// findProviderByID locates provider by ID
 func findProviderByID(providers []opencode.Provider, providerID string) *opencode.Provider {
 	for _, provider := range providers {
 		if provider.ID == providerID {
@@ -470,22 +471,37 @@ func findProviderByID(providers []opencode.Provider, providerID string) *opencod
 }
 
 func (a *App) InitializeProvider() tea.Cmd {
-	providersResponse, err := a.Client.App.Providers(context.Background(), opencode.AppProvidersParams{})
-	if err != nil {
-		slog.Error("Failed to list providers", "error", err)
-		// TODO: notify user
-		return nil
-	}
-	providers := providersResponse.Providers
-	if len(providers) == 0 {
-		slog.Error("No providers configured")
-		return nil
-	}
+	return func() tea.Msg {
+		providersResponse, err := a.Client.App.Providers(context.Background(), opencode.AppProvidersParams{})
+		if err != nil {
+			slog.Error("Failed to list providers", "error", err)
+			return toast.NewErrorToast("Failed to load providers")()
+		}
+		providers := providersResponse.Providers
+		if len(providers) == 0 {
+			slog.Error("No providers configured")
+			return toast.NewErrorToast("No providers configured")()
+		}
 
+		return ProvidersLoadedMsg{
+			Providers: providers,
+			Response:   providersResponse,
+		}
+	}
+}
+
+// ProvidersLoadedMsg carries async-loaded provider data
+type ProvidersLoadedMsg struct {
+	Providers []opencode.Provider
+	Response   *opencode.AppProvidersResponse
+}
+
+// ProcessProviders selects optimal model from available providers
+func (a *App) ProcessProviders(providers []opencode.Provider, response *opencode.AppProvidersResponse) tea.Cmd {
 	a.Providers = providers
 
-	// retains backwards compatibility with old state format
-	if model, ok := a.State.AgentModel[a.State.Agent]; ok {
+	// Map current agent's model config to state
+	if model, ok := a.State.AgentModel[a.Agent().Name]; ok {
 		a.State.Provider = model.ProviderID
 		a.State.Model = model.ModelID
 	}
@@ -493,7 +509,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 	var selectedProvider *opencode.Provider
 	var selectedModel *opencode.Model
 
-	// Priority 1: Command line --model flag (InitialModel)
+	// Priority 1: CLI --model flag
 	if a.InitialModel != nil && *a.InitialModel != "" {
 		if provider, model := findModelByFullID(providers, *a.InitialModel); provider != nil &&
 			model != nil {
@@ -511,7 +527,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Priority 2: Current agent's preferred model
+	// Priority 2: Agent's preferred model
 	if selectedProvider == nil && a.Agent().Model.ModelID != "" {
 		if provider, model := findModelByProviderAndModelID(providers, a.Agent().Model.ProviderID, a.Agent().Model.ModelID); provider != nil &&
 			model != nil {
@@ -531,7 +547,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Priority 3: Config file model setting
+	// Priority 3: Config file model
 	if selectedProvider == nil && a.Config.Model != "" {
 		if provider, model := findModelByFullID(providers, a.Config.Model); provider != nil &&
 			model != nil {
@@ -543,9 +559,9 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Priority 4: Recent model usage (most recently used model)
+	// Priority 4: Most recently used model
 	if selectedProvider == nil && len(a.State.RecentlyUsedModels) > 0 {
-		recentUsage := a.State.RecentlyUsedModels[0] // Most recent is first
+		recentUsage := a.State.RecentlyUsedModels[0]
 		if provider, model := findModelByProviderAndModelID(providers, recentUsage.ProviderID, recentUsage.ModelID); provider != nil &&
 			model != nil {
 			selectedProvider = provider
@@ -562,7 +578,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Priority 5: State-based model (backwards compatibility)
+	// Priority 5: Legacy state model (backwards compatibility)
 	if selectedProvider == nil && a.State.Provider != "" && a.State.Model != "" {
 		if provider, model := findModelByProviderAndModelID(providers, a.State.Provider, a.State.Model); provider != nil &&
 			model != nil {
@@ -574,11 +590,10 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Priority 6: Internal priority fallback (Anthropic preferred, then first available)
+	// Priority 6: Fallback (Anthropic preferred, then any available)
 	if selectedProvider == nil {
-		// Try Anthropic first as internal priority
 		if provider := findProviderByID(providers, "anthropic"); provider != nil {
-			if model := getDefaultModel(providersResponse, *provider); model != nil {
+			if model := getDefaultModel(response, *provider); model != nil {
 				selectedProvider = provider
 				selectedModel = model
 				slog.Debug(
@@ -591,10 +606,9 @@ func (a *App) InitializeProvider() tea.Cmd {
 			}
 		}
 
-		// If Anthropic not available, use first available provider
 		if selectedProvider == nil && len(providers) > 0 {
 			provider := &providers[0]
-			if model := getDefaultModel(providersResponse, *provider); model != nil {
+			if model := getDefaultModel(response, *provider); model != nil {
 				selectedProvider = provider
 				selectedModel = model
 				slog.Debug(
@@ -608,10 +622,9 @@ func (a *App) InitializeProvider() tea.Cmd {
 		}
 	}
 
-	// Final safety check
 	if selectedProvider == nil || selectedModel == nil {
 		slog.Error("Failed to select any model")
-		return nil
+		return toast.NewErrorToast("No models available. Configure a provider or open the model picker.")
 	}
 
 	var cmds []tea.Cmd
@@ -620,10 +633,8 @@ func (a *App) InitializeProvider() tea.Cmd {
 		Model:    *selectedModel,
 	}))
 
-	// Load initial session if provided
 	if a.InitialSession != nil && *a.InitialSession != "" {
 		cmds = append(cmds, func() tea.Msg {
-			// Find the session by ID
 			sessions, err := a.ListSessions(context.Background())
 			if err != nil {
 				slog.Error("Failed to list sessions for initial session", "error", err)
@@ -732,7 +743,6 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 		})
 		if err != nil {
 			slog.Error("Failed to initialize project", "error", err)
-			// status.Error(err.Error())
 		}
 	}()
 
@@ -803,7 +813,7 @@ func (a *App) SendPrompt(ctx context.Context, prompt Prompt) (*App, tea.Cmd) {
 	messageID := id.Ascending(id.Message)
 	message := prompt.ToMessage(messageID, a.Session.ID)
 
-	a.Messages = append(a.Messages, message)
+	a.AppendMessage(message)
 
 	cmds = append(cmds, func() tea.Msg {
 		_, err := a.Client.Session.Prompt(ctx, a.Session.ID, opencode.SessionPromptParams{
@@ -823,8 +833,7 @@ func (a *App) SendPrompt(ctx context.Context, prompt Prompt) (*App, tea.Cmd) {
 		return nil
 	})
 
-	// The actual response will come through SSE
-	// For now, just return success
+	// Response comes via SSE
 	return a, tea.Batch(cmds...)
 }
 
@@ -860,8 +869,7 @@ func (a *App) SendCommand(ctx context.Context, command string, args string) (*Ap
 		return nil
 	})
 
-	// The actual response will come through SSE
-	// For now, just return success
+	// Response comes via SSE
 	return a, tea.Batch(cmds...)
 }
 
@@ -892,13 +900,11 @@ func (a *App) SendShell(ctx context.Context, command string) (*App, tea.Cmd) {
 		return nil
 	})
 
-	// The actual response will come through SSE
-	// For now, just return success
+	// Response comes via SSE
 	return a, tea.Batch(cmds...)
 }
 
 func (a *App) Cancel(ctx context.Context, sessionID string) error {
-	// Cancel any running compact operation
 	if a.compactCancel != nil {
 		a.compactCancel()
 		a.compactCancel = nil
@@ -1024,6 +1030,96 @@ func (a *App) SyncOldestMessageID() {
 	a.OldestMessageID = a.Messages[0].ID()
 }
 
+// SetMessages replaces Messages slice and rebuilds index
+func (a *App) SetMessages(messages []Message) {
+	a.Messages = messages
+	a.messageIndex = make(map[string]int)
+	for i, msg := range messages {
+		a.messageIndex[msg.ID()] = i
+	}
+}
+
+// AppendMessage adds message and updates index
+func (a *App) AppendMessage(message Message) {
+	a.Messages = append(a.Messages, message)
+	a.messageIndex[message.ID()] = len(a.Messages) - 1
+}
+
+// PrependMessages adds messages to front and rebuilds index
+func (a *App) PrependMessages(messages []Message) {
+	a.Messages = append(messages, a.Messages...)
+	a.messageIndex = make(map[string]int)
+	for i, msg := range a.Messages {
+		a.messageIndex[msg.ID()] = i
+	}
+}
+
+// RemoveMessageByID removes a message by ID, updates the slice and index.
+func (a *App) RemoveMessageByID(id string) {
+	idx, exists := a.messageIndex[id]
+	if !exists {
+		return
+	}
+	a.Messages = append(a.Messages[:idx], a.Messages[idx+1:]...)
+	a.messageIndex = make(map[string]int)
+	for i, msg := range a.Messages {
+		a.messageIndex[msg.ID()] = i
+	}
+}
+
+// MessageIndex returns copy of message ID → index mapping
+func (a *App) MessageIndex() map[string]int {
+	result := make(map[string]int)
+	for k, v := range a.messageIndex {
+		result[k] = v
+	}
+	return result
+}
+
+// UpdateMessageParts updates message parts by ID
+func (a *App) UpdateMessageParts(messageID string, parts []opencode.PartUnion) {
+	messageIndex, exists := a.messageIndex[messageID]
+	if !exists {
+		return
+	}
+	a.Messages[messageIndex].Parts = parts
+}
+
+// UpdateMessage replaces message by ID
+func (a *App) UpdateMessage(messageID string, newMessage Message) {
+	messageIndex, exists := a.messageIndex[messageID]
+	if !exists {
+		return
+	}
+	a.Messages[messageIndex] = newMessage
+}
+
+// InsertMessage adds message chronologically
+func (a *App) InsertMessage(newMessage Message) {
+	newMessageID := newMessage.ID()
+	insertIndex := len(a.Messages)
+	for i := len(a.Messages) - 1; i >= 0; i-- {
+		var existingID string
+		switch casted := a.Messages[i].Info.(type) {
+		case opencode.UserMessage:
+			existingID = casted.ID
+		case opencode.AssistantMessage:
+			existingID = casted.ID
+		}
+		if existingID < newMessageID {
+			insertIndex = i + 1
+			break
+		}
+	}
+
+	a.Messages = append(a.Messages[:insertIndex], append([]Message{newMessage}, a.Messages[insertIndex:]...)...)
+	
+	a.messageIndex = make(map[string]int)
+	for i, msg := range a.Messages {
+		a.messageIndex[msg.ID()] = i
+	}
+}
+
 func (a *App) ListProviders(ctx context.Context) ([]opencode.Provider, error) {
 	response, err := a.Client.App.Providers(ctx, opencode.AppProvidersParams{})
 	if err != nil {
@@ -1037,6 +1133,4 @@ func (a *App) ListProviders(ctx context.Context) ([]opencode.Provider, error) {
 	return providers.Providers, nil
 }
 
-// func (a *App) loadCustomKeybinds() {
-//
-// }
+

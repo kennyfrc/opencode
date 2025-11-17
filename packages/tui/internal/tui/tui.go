@@ -32,16 +32,31 @@ import (
 	"github.com/kennyfrc/opencode/internal/util"
 )
 
-// InterruptDebounceTimeoutMsg is sent when the interrupt key debounce timeout expires
 type InterruptDebounceTimeoutMsg struct{}
-
-// ExitDebounceTimeoutMsg is sent when the exit key debounce timeout expires
 type ExitDebounceTimeoutMsg struct{}
 
-// InterruptKeyState tracks the state of interrupt key presses for debouncing
-type InterruptKeyState int
+type sendPromptWithParentMsg struct {
+	Session *opencode.Session
+	Prompt  app.SendPrompt
+}
 
-// ExitKeyState tracks the state of exit key presses for debouncing
+type sendCommandWithParentMsg struct {
+	Session *opencode.Session
+	Command app.SendCommand
+}
+
+type sendShellWithParentMsg struct {
+	Session *opencode.Session
+	Shell   app.SendShell
+}
+type sessionMessagesLoadedMsg struct {
+	Session  *opencode.Session
+	Messages []app.Message
+	HasMore  bool
+	Err      error
+}
+
+type InterruptKeyState int
 type ExitKeyState int
 
 const (
@@ -81,8 +96,6 @@ type Model struct {
 
 func (a Model) Init() tea.Cmd {
 	var cmds []tea.Cmd
-	// https://github.com/charmbracelet/bubbletea/issues/1440
-	// https://github.com/sst/opencode/issues/127
 	if !util.IsWsl() {
 		cmds = append(cmds, tea.RequestBackgroundColor)
 	}
@@ -159,12 +172,9 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// 1. Handle active modal
 		if a.modal != nil {
 			switch keyString {
-			// Escape closes current modal, but give modal a chance to handle it first
 			case "esc":
-				// give the modal a chance to handle the esc
 				updatedModal, cmd := a.modal.Update(msg)
 				a.modal = updatedModal.(layout.Modal)
 				if cmd != nil {
@@ -174,7 +184,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.modal = nil
 				return a, cmd
 			case "ctrl+c":
-				// give the modal a chance to handle the ctrl+c
 				updatedModal, cmd := a.modal.Update(msg)
 				a.modal = updatedModal.(layout.Modal)
 				if cmd != nil {
@@ -185,7 +194,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, cmd
 			}
 
-			// Pass all other key presses to the modal
 			updatedModal, cmd := a.modal.Update(msg)
 			a.modal = updatedModal.(layout.Modal)
 			return a, cmd
@@ -200,7 +208,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// 3. Handle completions trigger
 		if keyString == "/" &&
 			!a.showCompletionDialog &&
 			a.editor.Value() == "" &&
@@ -220,7 +227,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Sequence(cmds...)
 		}
 
-		// Handle file completions trigger
 		if keyString == "@" &&
 			!a.showCompletionDialog &&
 			!a.app.IsBashMode {
@@ -230,7 +236,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.editor = updated.(chat.EditorComponent)
 			cmds = append(cmds, cmd)
 
-			// Set file, symbols, and agents providers for @ completion
 			a.completions = dialog.NewCompletionDialogComponent("@", a.agentsProvider, a.fileProvider, a.symbolsProvider)
 			updated, cmd = a.completions.Update(msg)
 			a.completions = updated.(dialog.CompletionDialog)
@@ -264,7 +269,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Batch(cmds...)
 		}
 
-		// 4. Maximize editor responsiveness for printable characters
 		if msg.Text != "" {
 			updated, cmd := a.editor.Update(msg)
 			a.editor = updated.(chat.EditorComponent)
@@ -272,7 +276,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Batch(cmds...)
 		}
 
-		// 5. Check for leader key activation
 		if a.leaderBinding != nil &&
 			!a.app.IsLeaderSequence &&
 			key.Matches(msg, *a.leaderBinding) {
@@ -280,66 +283,55 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-		// 6 Handle input clear command
-		inputClearCommand := a.app.Commands[commands.InputClearCommand]
+	inputClearCommand := a.app.Commands[commands.InputClearCommand]
 		if inputClearCommand.Matches(msg, a.app.IsLeaderSequence) && a.editor.Length() > 0 {
 			return a, util.CmdHandler(commands.ExecuteCommandMsg(inputClearCommand))
 		}
 
-		// 7. Handle interrupt key debounce for session interrupt
 		interruptCommand := a.app.Commands[commands.SessionInterruptCommand]
 		if interruptCommand.Matches(msg, a.app.IsLeaderSequence) && a.app.IsBusy() {
 			switch a.interruptKeyState {
 			case InterruptKeyIdle:
-				// First interrupt key press - start debounce timer
 				a.interruptKeyState = InterruptKeyFirstPress
 				a.editor.SetInterruptKeyInDebounce(true)
 				return a, tea.Tick(interruptDebounceTimeout, func(t time.Time) tea.Msg {
 					return InterruptDebounceTimeoutMsg{}
 				})
 			case InterruptKeyFirstPress:
-				// Second interrupt key press within timeout - actually interrupt
 				a.interruptKeyState = InterruptKeyIdle
 				a.editor.SetInterruptKeyInDebounce(false)
 				return a, util.CmdHandler(commands.ExecuteCommandMsg(interruptCommand))
 			}
 		}
 
-		// 8. Handle exit key debounce for app exit when using non-leader command
 		exitCommand := a.app.Commands[commands.AppExitCommand]
 		if exitCommand.Matches(msg, a.app.IsLeaderSequence) {
 			switch a.exitKeyState {
 			case ExitKeyIdle:
-				// First exit key press - start debounce timer
 				a.exitKeyState = ExitKeyFirstPress
 				a.editor.SetExitKeyInDebounce(true)
 				return a, tea.Tick(exitDebounceTimeout, func(t time.Time) tea.Msg {
 					return ExitDebounceTimeoutMsg{}
 				})
 			case ExitKeyFirstPress:
-				// Second exit key press within timeout - actually exit
 				a.exitKeyState = ExitKeyIdle
 				a.editor.SetExitKeyInDebounce(false)
 				return a, util.CmdHandler(commands.ExecuteCommandMsg(exitCommand))
 			}
 		}
 
-		// 9. Check again for commands that don't require leader (excluding interrupt when busy and exit when in debounce)
 		matches := a.app.Commands.Matches(msg, a.app.IsLeaderSequence)
 		if len(matches) > 0 {
-			// Skip interrupt key if we're in debounce mode and app is busy
 			if interruptCommand.Matches(msg, a.app.IsLeaderSequence) && a.app.IsBusy() && a.interruptKeyState != InterruptKeyIdle {
 				return a, nil
 			}
 			return a, util.CmdHandler(commands.ExecuteCommandsMsg(matches))
 		}
 
-		// Fallback: suspend if ctrl+z is pressed and no user keybind matched
 		if keyString == "ctrl+z" {
 			return a, tea.Suspend
 		}
 
-		// 10. Fallback to editor. This is for other characters like backspace, tab, etc.
 		updatedEditor, cmd := a.editor.Update(msg)
 		a.editor = updatedEditor.(chat.EditorComponent)
 		return a, cmd
@@ -379,7 +371,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.modal = nil
 		return a, cmd
 	case dialog.ReopenSessionModalMsg:
-		// Reopen the session modal (used when exiting rename mode)
 		sessionDialog := dialog.NewSessionDialog(a.app)
 		a.modal = sessionDialog
 		return a, nil
@@ -395,70 +386,105 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case error:
 		return a, toast.NewErrorToast(msg.Error())
+	case app.ProvidersLoadedMsg:
+		cmd := a.app.ProcessProviders(msg.Providers, msg.Response)
+		cmds = append(cmds, cmd)
 	case app.SendPrompt:
 		a.showCompletionDialog = false
-		// If we're in a child session, switch back to parent before sending prompt
+
 		if a.app.Session.ParentID != "" {
-			parentSession, err := a.app.Client.Session.Get(context.Background(), a.app.Session.ParentID, opencode.SessionGetParams{})
-			if err != nil {
-				slog.Error("Failed to get parent session", "error", err)
-				return a, toast.NewErrorToast("Failed to get parent session")
+			return a, func() tea.Msg {
+				session, err := a.app.Client.Session.Get(
+					context.Background(),
+					a.app.Session.ParentID,
+					opencode.SessionGetParams{},
+				)
+				if err != nil {
+					slog.Error("Failed to get parent session", "error", err)
+					return toast.NewErrorToast("Failed to get parent session")()
+				}
+				return sendPromptWithParentMsg{
+					Session: session,
+					Prompt:  msg,
+				}
 			}
-			a.app.Session = parentSession
-			a.app, cmd = a.app.SendPrompt(context.Background(), msg)
-			cmds = append(cmds, tea.Sequence(
-				util.CmdHandler(app.SessionSelectedMsg(parentSession)),
-				cmd,
-			))
-		} else {
-			a.app, cmd = a.app.SendPrompt(context.Background(), msg)
-			cmds = append(cmds, cmd)
 		}
+
+		a.app, cmd = a.app.SendPrompt(context.Background(), msg)
+		cmds = append(cmds, cmd)
+	case sendPromptWithParentMsg:
+		a.app.Session = msg.Session
+		a.app, cmd = a.app.SendPrompt(context.Background(), msg.Prompt)
+		cmds = append(cmds, tea.Sequence(
+			util.CmdHandler(app.SessionSelectedMsg(msg.Session)),
+			cmd,
+		))
 	case app.SendCommand:
-		// If we're in a child session, switch back to parent before sending prompt
+		// If we're in a child session, schedule network work as a command.
 		if a.app.Session.ParentID != "" {
-			parentSession, err := a.app.Client.Session.Get(context.Background(), a.app.Session.ParentID, opencode.SessionGetParams{})
-			if err != nil {
-				slog.Error("Failed to get parent session", "error", err)
-				return a, toast.NewErrorToast("Failed to get parent session")
+			return a, func() tea.Msg {
+				session, err := a.app.Client.Session.Get(
+					context.Background(),
+					a.app.Session.ParentID,
+					opencode.SessionGetParams{},
+				)
+				if err != nil {
+					slog.Error("Failed to get parent session", "error", err)
+					return toast.NewErrorToast("Failed to get parent session")()
+				}
+				return sendCommandWithParentMsg{
+					Session: session,
+					Command: msg,
+				}
 			}
-			a.app.Session = parentSession
-			a.app, cmd = a.app.SendCommand(context.Background(), msg.Command, msg.Args)
-			cmds = append(cmds, tea.Sequence(
-				util.CmdHandler(app.SessionSelectedMsg(parentSession)),
-				cmd,
-			))
-		} else {
-			a.app, cmd = a.app.SendCommand(context.Background(), msg.Command, msg.Args)
-			cmds = append(cmds, cmd)
 		}
+
+		a.app, cmd = a.app.SendCommand(context.Background(), msg.Command, msg.Args)
+		cmds = append(cmds, cmd)
+	case sendCommandWithParentMsg:
+		a.app.Session = msg.Session
+		a.app, cmd = a.app.SendCommand(context.Background(), msg.Command.Command, msg.Command.Args)
+		cmds = append(cmds, tea.Sequence(
+			util.CmdHandler(app.SessionSelectedMsg(msg.Session)),
+			cmd,
+		))
 	case app.SendShell:
-		// If we're in a child session, switch back to parent before sending prompt
+		// If we're in a child session, schedule network work as a command.
 		if a.app.Session.ParentID != "" {
-			parentSession, err := a.app.Client.Session.Get(context.Background(), a.app.Session.ParentID, opencode.SessionGetParams{})
-			if err != nil {
-				slog.Error("Failed to get parent session", "error", err)
-				return a, toast.NewErrorToast("Failed to get parent session")
+			return a, func() tea.Msg {
+				session, err := a.app.Client.Session.Get(
+					context.Background(),
+					a.app.Session.ParentID,
+					opencode.SessionGetParams{},
+				)
+				if err != nil {
+					slog.Error("Failed to get parent session", "error", err)
+					return toast.NewErrorToast("Failed to get parent session")()
+				}
+				return sendShellWithParentMsg{
+					Session: session,
+					Shell:   msg,
+				}
 			}
-			a.app.Session = parentSession
-			a.app, cmd = a.app.SendShell(context.Background(), msg.Command)
-			cmds = append(cmds, tea.Sequence(
-				util.CmdHandler(app.SessionSelectedMsg(parentSession)),
-				cmd,
-			))
-		} else {
-			a.app, cmd = a.app.SendShell(context.Background(), msg.Command)
-			cmds = append(cmds, cmd)
 		}
+
+		a.app, cmd = a.app.SendShell(context.Background(), msg.Command)
+		cmds = append(cmds, cmd)
+	case sendShellWithParentMsg:
+		a.app.Session = msg.Session
+		a.app, cmd = a.app.SendShell(context.Background(), msg.Shell.Command)
+		cmds = append(cmds, tea.Sequence(
+			util.CmdHandler(app.SessionSelectedMsg(msg.Session)),
+			cmd,
+		))
 	case app.SetEditorContentMsg:
-		// Set the editor content without sending
 		a.editor.SetValueWithAttachments(msg.Text)
 		updated, cmd := a.editor.Focus()
 		a.editor = updated.(chat.EditorComponent)
 		cmds = append(cmds, cmd)
 	case app.SessionClearedMsg:
 		a.app.Session = &opencode.Session{}
-		a.app.Messages = []app.Message{}
+		a.app.SetMessages([]app.Message{})
 		a.app.HasMoreHistory = false
 		a.app.LoadingOlder = false
 		a.app.SyncOldestMessageID()
@@ -479,7 +505,7 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case opencode.EventListResponseEventSessionDeleted:
 		if a.app.Session != nil && msg.Properties.Info.ID == a.app.Session.ID {
 			a.app.Session = &opencode.Session{}
-			a.app.Messages = []app.Message{}
+			a.app.SetMessages([]app.Message{})
 			a.app.HasMoreHistory = false
 			a.app.LoadingOlder = false
 			a.app.SyncOldestMessageID()
@@ -492,16 +518,8 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case opencode.EventListResponseEventMessagePartUpdated:
 		slog.Debug("message part updated", "message", msg.Properties.Part.MessageID, "part", msg.Properties.Part.ID)
 		if msg.Properties.Part.SessionID == a.app.Session.ID {
-			messageIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
-				switch casted := m.Info.(type) {
-				case opencode.UserMessage:
-					return casted.ID == msg.Properties.Part.MessageID
-				case opencode.AssistantMessage:
-					return casted.ID == msg.Properties.Part.MessageID
-				}
-				return false
-			})
-			if messageIndex > -1 {
+			messageIndex, ok := a.app.MessageIndex()[msg.Properties.Part.MessageID]
+			if ok {
 				message := a.app.Messages[messageIndex]
 				partIndex := slices.IndexFunc(message.Parts, func(p opencode.PartUnion) bool {
 					switch casted := p.(type) {
@@ -526,22 +544,14 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if partIndex == -1 {
 					message.Parts = append(message.Parts, msg.Properties.Part.AsUnion())
 				}
-				a.app.Messages[messageIndex] = message
+				a.app.UpdateMessage(msg.Properties.Part.MessageID, message)
 			}
 		}
 	case opencode.EventListResponseEventMessagePartRemoved:
 		slog.Debug("message part removed", "session", msg.Properties.SessionID, "message", msg.Properties.MessageID, "part", msg.Properties.PartID)
 		if msg.Properties.SessionID == a.app.Session.ID {
-			messageIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
-				switch casted := m.Info.(type) {
-				case opencode.UserMessage:
-					return casted.ID == msg.Properties.MessageID
-				case opencode.AssistantMessage:
-					return casted.ID == msg.Properties.MessageID
-				}
-				return false
-			})
-			if messageIndex > -1 {
+			messageIndex, ok := a.app.MessageIndex()[msg.Properties.MessageID]
+			if ok {
 				message := a.app.Messages[messageIndex]
 				partIndex := slices.IndexFunc(message.Parts, func(p opencode.PartUnion) bool {
 					switch casted := p.(type) {
@@ -561,84 +571,42 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return false
 				})
 				if partIndex > -1 {
-					// Remove the part at partIndex
 					message.Parts = append(message.Parts[:partIndex], message.Parts[partIndex+1:]...)
-					a.app.Messages[messageIndex] = message
+					a.app.UpdateMessage(msg.Properties.MessageID, message)
 				}
 			}
 		}
 	case opencode.EventListResponseEventMessageRemoved:
 		slog.Debug("message removed", "session", msg.Properties.SessionID, "message", msg.Properties.MessageID)
 		if msg.Properties.SessionID == a.app.Session.ID {
-			messageIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
-				switch casted := m.Info.(type) {
-				case opencode.UserMessage:
-					return casted.ID == msg.Properties.MessageID
-				case opencode.AssistantMessage:
-					return casted.ID == msg.Properties.MessageID
-				}
-				return false
-			})
-			if messageIndex > -1 {
-				a.app.Messages = append(a.app.Messages[:messageIndex], a.app.Messages[messageIndex+1:]...)
-				a.app.SyncOldestMessageID()
-			}
+			a.app.RemoveMessageByID(msg.Properties.MessageID)
+			a.app.SyncOldestMessageID()
 		}
 	case opencode.EventListResponseEventMessageUpdated:
 		if msg.Properties.Info.SessionID == a.app.Session.ID {
-			matchIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
-				switch casted := m.Info.(type) {
-				case opencode.UserMessage:
-					return casted.ID == msg.Properties.Info.ID
-				case opencode.AssistantMessage:
-					return casted.ID == msg.Properties.Info.ID
-				}
-				return false
-			})
+			var messageID string
+			switch casted := msg.Properties.Info.AsUnion().(type) {
+			case opencode.UserMessage:
+				messageID = casted.ID
+			case opencode.AssistantMessage:
+				messageID = casted.ID
+			}
 
-			if matchIndex > -1 {
+			
+			if matchIndex, exists := a.app.MessageIndex()[messageID]; exists {
 				match := a.app.Messages[matchIndex]
-				a.app.Messages[matchIndex] = app.Message{
+				updatedMessage := app.Message{
 					Info:  msg.Properties.Info.AsUnion(),
 					Parts: match.Parts,
 				}
-			}
-
-			if matchIndex == -1 {
-				// Extract the new message ID
-				var newMessageID string
-				switch casted := msg.Properties.Info.AsUnion().(type) {
-				case opencode.UserMessage:
-					newMessageID = casted.ID
-				case opencode.AssistantMessage:
-					newMessageID = casted.ID
-				}
-
-				// Find the correct insertion index by scanning backwards
-				// Most messages are added to the end, so start from the end
-				insertIndex := len(a.app.Messages)
-				for i := len(a.app.Messages) - 1; i >= 0; i-- {
-					var existingID string
-					switch casted := a.app.Messages[i].Info.(type) {
-					case opencode.UserMessage:
-						existingID = casted.ID
-					case opencode.AssistantMessage:
-						existingID = casted.ID
-					}
-					if existingID < newMessageID {
-						insertIndex = i + 1
-						break
-					}
-				}
-
-				// Create the new message
+				a.app.UpdateMessage(messageID, updatedMessage)
+			} else {
 				newMessage := app.Message{
 					Info:  msg.Properties.Info.AsUnion(),
 					Parts: []opencode.PartUnion{},
 				}
 
-				// Insert at the correct position
-				a.app.Messages = append(a.app.Messages[:insertIndex], append([]app.Message{newMessage}, a.app.Messages[insertIndex:]...)...)
+				a.app.InsertMessage(newMessage)
 				a.app.SyncOldestMessageID()
 			}
 		}
@@ -664,7 +632,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case opencode.EventListResponseEventSessionError:
 		switch err := msg.Properties.Error.AsUnion().(type) {
 		case nil:
-			// No error details provided
 		case opencode.ProviderAuthError:
 			slog.Error("Failed to authenticate with provider", "error", err.Data.Message)
 			return a, toast.NewErrorToast("Provider error: " + err.Data.Message)
@@ -675,13 +642,11 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			slog.Error("API error", "message", err.Data.Message, "statusCode", err.Data.StatusCode)
 			return a, toast.NewErrorToast(err.Data.Message, toast.WithTitle(string(err.Name)))
 		case opencode.MessageAbortedError:
-			// Message was aborted - this is expected when user cancels, so just log it
 			slog.Debug("Message aborted", "message", err.Data.Message)
 		case opencode.EventListResponseEventSessionErrorPropertiesErrorMessageOutputLengthError:
 			slog.Error("Message output length error")
 			return a, toast.NewErrorToast("Message output length exceeded limit")
 		default:
-			// Handle any unhandled error types
 			slog.Error("Unhandled session error type", "type", fmt.Sprintf("%T", err))
 			return a, toast.NewErrorToast("An unexpected error occurred")
 		}
@@ -690,7 +655,7 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, toast.NewSuccessToast("Session compacted successfully")
 		}
 	case tea.WindowSizeMsg:
-		msg.Height -= 2 // Make space for the status bar
+		msg.Height -= 2
 		a.width, a.height = msg.Width, msg.Height
 		container := min(a.width, 86)
 		layout.Current = &layout.LayoutInfo{
@@ -711,22 +676,42 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.app.HasMoreHistory = false
 		a.app.OldestMessageID = ""
 
-		messages, hasMore, err := a.app.ListMessages(context.Background(), msg.ID, nil, a.app.MessagesPageSize)
-		if err != nil {
-			slog.Error("Failed to list messages", "error", err.Error())
+		session := msg
+		loadCmd := func() tea.Msg {
+			messages, hasMore, err := a.app.ListMessages(
+				context.Background(),
+				session.ID,
+				nil,
+				a.app.MessagesPageSize,
+			)
+			return sessionMessagesLoadedMsg{
+				Session:  session,
+				Messages: messages,
+				HasMore:  hasMore,
+				Err:      err,
+			}
+		}
+
+		cmds = append(cmds, loadCmd)
+		return a, tea.Batch(cmds...)
+	case sessionMessagesLoadedMsg:
+		if msg.Err != nil {
+			slog.Error("Failed to list messages", "error", msg.Err)
 			return a, toast.NewErrorToast("Failed to open session")
 		}
-		a.app.Session = msg
-		a.app.Messages = messages
-		a.app.HasMoreHistory = hasMore
+
+		a.app.Session = msg.Session
+		a.app.SetMessages(msg.Messages)
+		a.app.HasMoreHistory = msg.HasMore
 		a.app.SyncOldestMessageID()
+
 		cmds = append(cmds, util.CmdHandler(app.SessionLoadedMsg{}))
 		return a, tea.Batch(cmds...)
 	case app.SessionCreatedMsg:
 		a.app.Session = msg.Session
 	case app.OlderMessagesLoadedMsg:
 		if len(msg.Messages) > 0 {
-			a.app.Messages = append(msg.Messages, a.app.Messages...)
+			a.app.PrependMessages(msg.Messages)
 			a.app.SyncOldestMessageID()
 		}
 		a.app.HasMoreHistory = msg.HasMore
@@ -736,7 +721,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case dialog.RestoreToMessageMsg:
 		cmd := func() tea.Msg {
-			// Find next user message after target
 			var nextMessageID string
 			for i := msg.Index + 1; i < len(a.app.Messages); i++ {
 				if userMsg, ok := a.app.Messages[i].Info.(opencode.UserMessage); ok {
@@ -749,10 +733,8 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var err error
 
 			if nextMessageID == "" {
-				// Last message - use unrevert to restore full conversation
 				response, err = a.app.Client.Session.Unrevert(context.Background(), a.app.Session.ID, opencode.SessionUnrevertParams{})
 			} else {
-				// Revert to next message to make target the last visible
 				response, err = a.app.Client.Session.Revert(context.Background(), a.app.Session.ID,
 					opencode.SessionRevertParams{MessageID: opencode.F(nextMessageID)})
 			}
@@ -792,15 +774,12 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.toastManager = tm
 		cmds = append(cmds, cmd)
 	case InterruptDebounceTimeoutMsg:
-		// Reset interrupt key state after timeout
 		a.interruptKeyState = InterruptKeyIdle
 		a.editor.SetInterruptKeyInDebounce(false)
 	case ExitDebounceTimeoutMsg:
-		// Reset exit key state after timeout
 		a.exitKeyState = ExitKeyIdle
 		a.editor.SetExitKeyInDebounce(false)
 	case tea.PasteMsg, tea.ClipboardMsg:
-		// Paste events: prioritize modal if active, otherwise editor
 		if a.modal != nil {
 			updatedModal, cmd := a.modal.Update(msg)
 			a.modal = updatedModal.(layout.Modal)
@@ -1189,7 +1168,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case commands.EditorOpenCommand:
 		if a.app.IsBusy() {
-			// status.Warn("Agent is working, please wait...")
 			return a, nil
 		}
 		editor := util.GetEditor()
@@ -1199,7 +1177,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 
 		value := a.editor.Value()
 
-		// Expand text attachments before opening editor
 		for _, att := range a.editor.GetAttachments() {
 			if textSource, ok := att.GetTextSource(); ok {
 				value = strings.Replace(value, att.Display, textSource.Value, 1)
@@ -1298,7 +1275,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 		if a.app.Session.ID == "" {
 			return a, nil
 		}
-		// TODO: block until compaction is complete
 		a.app.CompactSession(context.Background())
 	case commands.SessionChildCycleCommand:
 		if a.app.Session.ID == "" {
@@ -1333,10 +1309,8 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				return toast.NewErrorToast("Failed to get session children")
 			}
 
-			// Reverse sort the children (newest first)
 			slices.Reverse(*children)
 
-			// Create combined array: [parent, child1, child2, ...]
 			sessions := []*opencode.Session{parentSession}
 			for i := range *children {
 				sessions = append(sessions, &(*children)[i])
@@ -1346,7 +1320,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				return toast.NewInfoToast("No child sessions available")
 			}
 
-			// Find current session index in combined array
 			currentIndex := -1
 			for i, session := range sessions {
 				if session.ID == a.app.Session.ID {
@@ -1360,7 +1333,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				currentIndex = 0
 			}
 
-			// Cycle to next session (parent or child)
 			nextIndex := (currentIndex + 1) % len(sessions)
 			nextSession := sessions[nextIndex]
 
@@ -1399,10 +1371,8 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				return toast.NewErrorToast("Failed to get session children")
 			}
 
-			// Reverse sort the children (newest first)
 			slices.Reverse(*children)
 
-			// Create combined array: [parent, child1, child2, ...]
 			sessions := []*opencode.Session{parentSession}
 			for i := range *children {
 				sessions = append(sessions, &(*children)[i])
@@ -1412,7 +1382,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				return toast.NewInfoToast("No child sessions available")
 			}
 
-			// Find current session index in combined array
 			currentIndex := -1
 			for i, session := range sessions {
 				if session.ID == a.app.Session.ID {
@@ -1421,12 +1390,10 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			// If session not found, default to parent (shouldn't happen)
 			if currentIndex == -1 {
 				currentIndex = 0
 			}
 
-			// Cycle to previous session (parent or child)
 			nextIndex := (currentIndex - 1 + len(sessions)) % len(sessions)
 			nextSession := sessions[nextIndex]
 
@@ -1437,13 +1404,11 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 			return a, toast.NewErrorToast("No active session to export.")
 		}
 
-		// Use current conversation history
 		messages := a.app.Messages
 		if len(messages) == 0 {
 			return a, toast.NewInfoToast("No messages to export.")
 		}
 
-		// Format to Markdown
 		markdownContent := formatConversationToMarkdown(messages)
 
 		editor := util.GetEditor()
@@ -1451,7 +1416,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 			return a, toast.NewErrorToast("No editor found. Set EDITOR environment variable (e.g., export EDITOR=vim)")
 		}
 
-		// Create and write to temp file
 		tmpfile, err := os.CreateTemp("", "conversation-*.md")
 		if err != nil {
 			slog.Error("Failed to create temp file", "error", err)
@@ -1467,7 +1431,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 		}
 		tmpfile.Close()
 
-		// Open in editor
 		parts := strings.Fields(editor)
 		c := exec.Command(parts[0], append(parts[1:], tmpfile.Name())...) //nolint:gosec
 		c.Stdin = os.Stdin
@@ -1477,7 +1440,6 @@ func (a Model) executeCommand(command commands.Command) (tea.Model, tea.Cmd) {
 			if err != nil {
 				slog.Error("Failed to open editor for conversation", "error", err)
 			}
-			// Clean up the file after editor closes
 			os.Remove(tmpfile.Name())
 			return nil
 		})
