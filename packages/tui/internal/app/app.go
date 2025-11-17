@@ -27,6 +27,16 @@ type Message struct {
 	Parts []opencode.PartUnion
 }
 
+func (m Message) ID() string {
+	switch casted := m.Info.(type) {
+	case opencode.UserMessage:
+		return casted.ID
+	case opencode.AssistantMessage:
+		return casted.ID
+	}
+	return ""
+}
+
 type App struct {
 	Project           opencode.Project
 	Agents            []opencode.Agent
@@ -41,6 +51,10 @@ type App struct {
 	Model             *opencode.Model
 	Session           *opencode.Session
 	Messages          []Message
+	MessagesPageSize  int
+	OldestMessageID   string
+	HasMoreHistory    bool
+	LoadingOlder      bool
 	Permissions       []opencode.Permission
 	CurrentPermission opencode.Permission
 	Commands          commands.CommandRegistry
@@ -70,6 +84,10 @@ type SessionUnrevertedMsg struct {
 	Session opencode.Session
 }
 type SessionLoadedMsg struct{}
+type OlderMessagesLoadedMsg struct {
+	Messages []Message
+	HasMore  bool
+}
 type ModelSelectedMsg struct {
 	Provider opencode.Provider
 	Model    opencode.Model
@@ -98,6 +116,8 @@ type FileRenderedMsg struct {
 type PermissionRespondedToMsg struct {
 	Response opencode.SessionPermissionRespondParamsResponse
 }
+
+const defaultMessagesPageSize = 100
 
 func New(
 	ctx context.Context,
@@ -195,22 +215,23 @@ func New(
 	}
 
 	app := &App{
-		Project:        *project,
-		Agents:         agents,
-		Version:        version,
-		StatePath:      appStatePath,
-		Config:         configInfo,
-		State:          appState,
-		Client:         httpClient,
-		AgentIndex:     agentIndex,
-		Session:        &opencode.Session{},
-		Messages:       []Message{},
-		Commands:       commands.LoadFromConfig(configInfo, *customCommands),
-		InitialModel:   initialModel,
-		InitialPrompt:  initialPrompt,
-		InitialAgent:   initialAgent,
-		InitialSession: initialSession,
-		ScrollSpeed:    int(configInfo.Tui.ScrollSpeed),
+		Project:          *project,
+		Agents:           agents,
+		Version:          version,
+		StatePath:        appStatePath,
+		Config:           configInfo,
+		State:            appState,
+		Client:           httpClient,
+		AgentIndex:       agentIndex,
+		Session:          &opencode.Session{},
+		Messages:         []Message{},
+		MessagesPageSize: defaultMessagesPageSize,
+		Commands:         commands.LoadFromConfig(configInfo, *customCommands),
+		InitialModel:     initialModel,
+		InitialPrompt:    initialPrompt,
+		InitialAgent:     initialAgent,
+		InitialSession:   initialSession,
+		ScrollSpeed:      int(configInfo.Tui.ScrollSpeed),
 	}
 
 	return app, nil
@@ -923,15 +944,34 @@ func (a *App) UpdateSession(ctx context.Context, sessionID string, title string)
 	return nil
 }
 
-func (a *App) ListMessages(ctx context.Context, sessionId string) ([]Message, error) {
-	response, err := a.Client.Session.Messages(ctx, sessionId, opencode.SessionMessagesParams{})
+func (a *App) ListMessages(
+	ctx context.Context,
+	sessionID string,
+	before *string,
+	limit int,
+) ([]Message, bool, error) {
+	size := limit
+	if size <= 0 {
+		size = a.MessagesPageSize
+		if size <= 0 {
+			size = defaultMessagesPageSize
+		}
+	}
+	params := opencode.SessionMessagesParams{
+		Limit:     opencode.F(int64(size)),
+		Direction: opencode.F(opencode.SessionMessagesParamsDirectionDesc),
+	}
+	if before != nil && *before != "" {
+		params.Before = opencode.F(*before)
+	}
+	response, err := a.Client.Session.Messages(ctx, sessionID, params)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if response == nil {
-		return []Message{}, nil
+		return []Message{}, false, nil
 	}
-	messages := []Message{}
+	result := []Message{}
 	for _, message := range *response {
 		msg := Message{
 			Info:  message.Info.AsUnion(),
@@ -940,9 +980,48 @@ func (a *App) ListMessages(ctx context.Context, sessionId string) ([]Message, er
 		for _, part := range message.Parts {
 			msg.Parts = append(msg.Parts, part.AsUnion())
 		}
-		messages = append(messages, msg)
+		result = append(result, msg)
 	}
-	return messages, nil
+	hasMore := len(result) == size
+	return result, hasMore, nil
+}
+
+func (a *App) LoadOlderMessages(ctx context.Context) tea.Cmd {
+	if a.Session == nil || a.Session.ID == "" {
+		return nil
+	}
+	if !a.HasMoreHistory || a.OldestMessageID == "" {
+		return nil
+	}
+	if a.LoadingOlder {
+		return nil
+	}
+	a.LoadingOlder = true
+	before := a.OldestMessageID
+	sessionID := a.Session.ID
+	limit := a.MessagesPageSize
+	return func() tea.Msg {
+		defer func() {
+			a.LoadingOlder = false
+		}()
+		messages, hasMore, err := a.ListMessages(ctx, sessionID, &before, limit)
+		if err != nil {
+			slog.Error("Failed to load older messages", "error", err)
+			return toast.NewErrorToast("Failed to load older messages")()
+		}
+		return OlderMessagesLoadedMsg{
+			Messages: messages,
+			HasMore:  hasMore,
+		}
+	}
+}
+
+func (a *App) SyncOldestMessageID() {
+	if len(a.Messages) == 0 {
+		a.OldestMessageID = ""
+		return
+	}
+	a.OldestMessageID = a.Messages[0].ID()
 }
 
 func (a *App) ListProviders(ctx context.Context) ([]opencode.Provider, error) {

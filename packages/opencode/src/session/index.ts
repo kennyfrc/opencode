@@ -255,6 +255,15 @@ export namespace Session {
     return result
   }
 
+  export const MessagesPageInput = z.object({
+    sessionID: Identifier.schema("session"),
+    before: Identifier.schema("message").optional(),
+    after: Identifier.schema("message").optional(),
+    limit: z.number().int().positive().max(500).default(100),
+    direction: z.enum(["asc", "desc"]).default("asc"),
+  })
+  export type MessagesPageInput = z.infer<typeof MessagesPageInput>
+
   export const messages = fn(Identifier.schema("session"), async (sessionID) => {
     const result = [] as MessageV2.WithParts[]
     for (const p of await Storage.list(["message", sessionID])) {
@@ -265,6 +274,43 @@ export namespace Session {
       })
     }
     result.sort((a, b) => (a.info.id > b.info.id ? 1 : -1))
+    return result
+  })
+
+  export const messagesPage = fn(MessagesPageInput, async (input) => {
+    const result = [] as MessageV2.WithParts[]
+    const matches = [] as { key: string[]; id: string }[]
+    for (const key of await Storage.list(["message", input.sessionID])) {
+      const id = key.at(-1)!
+      if (input.before && !(id < input.before)) continue
+      if (input.after && !(id > input.after)) continue
+      matches.push({
+        key,
+        id,
+      })
+    }
+    matches.sort((a, b) => (a.id > b.id ? 1 : -1))
+    const slice = [] as { key: string[]; id: string }[]
+    const limit = input.limit
+    if (input.direction === "desc") {
+      for (let index = matches.length - 1; index >= 0; index--) {
+        slice.push(matches[index])
+        if (slice.length === limit) break
+      }
+    } else {
+      for (let index = 0; index < matches.length; index++) {
+        slice.push(matches[index])
+        if (slice.length === limit) break
+      }
+    }
+    slice.sort((a, b) => (a.id > b.id ? 1 : -1))
+    for (const item of slice) {
+      const info = await Storage.read<MessageV2.Info>(item.key)
+      result.push({
+        info,
+        parts: await getParts(info.id),
+      })
+    }
     return result
   })
 

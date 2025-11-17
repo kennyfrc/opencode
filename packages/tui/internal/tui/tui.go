@@ -459,6 +459,9 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case app.SessionClearedMsg:
 		a.app.Session = &opencode.Session{}
 		a.app.Messages = []app.Message{}
+		a.app.HasMoreHistory = false
+		a.app.LoadingOlder = false
+		a.app.SyncOldestMessageID()
 	case dialog.CompletionDialogCloseMsg:
 		a.showCompletionDialog = false
 	case opencode.EventListResponseEventInstallationUpdated:
@@ -477,6 +480,9 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.app.Session != nil && msg.Properties.Info.ID == a.app.Session.ID {
 			a.app.Session = &opencode.Session{}
 			a.app.Messages = []app.Message{}
+			a.app.HasMoreHistory = false
+			a.app.LoadingOlder = false
+			a.app.SyncOldestMessageID()
 		}
 		return a, toast.NewSuccessToast("Session deleted successfully")
 	case opencode.EventListResponseEventSessionUpdated:
@@ -575,6 +581,7 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 			if messageIndex > -1 {
 				a.app.Messages = append(a.app.Messages[:messageIndex], a.app.Messages[messageIndex+1:]...)
+				a.app.SyncOldestMessageID()
 			}
 		}
 	case opencode.EventListResponseEventMessageUpdated:
@@ -632,6 +639,7 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// Insert at the correct position
 				a.app.Messages = append(a.app.Messages[:insertIndex], append([]app.Message{newMessage}, a.app.Messages[insertIndex:]...)...)
+				a.app.SyncOldestMessageID()
 			}
 		}
 	case opencode.EventListResponseEventPermissionUpdated:
@@ -699,17 +707,29 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.messages = updated.(chat.MessagesComponent)
 		cmds = append(cmds, cmd)
 
-		messages, err := a.app.ListMessages(context.Background(), msg.ID)
+		a.app.LoadingOlder = false
+		a.app.HasMoreHistory = false
+		a.app.OldestMessageID = ""
+
+		messages, hasMore, err := a.app.ListMessages(context.Background(), msg.ID, nil, a.app.MessagesPageSize)
 		if err != nil {
 			slog.Error("Failed to list messages", "error", err.Error())
 			return a, toast.NewErrorToast("Failed to open session")
 		}
 		a.app.Session = msg
 		a.app.Messages = messages
+		a.app.HasMoreHistory = hasMore
+		a.app.SyncOldestMessageID()
 		cmds = append(cmds, util.CmdHandler(app.SessionLoadedMsg{}))
 		return a, tea.Batch(cmds...)
 	case app.SessionCreatedMsg:
 		a.app.Session = msg.Session
+	case app.OlderMessagesLoadedMsg:
+		if len(msg.Messages) > 0 {
+			a.app.Messages = append(msg.Messages, a.app.Messages...)
+			a.app.SyncOldestMessageID()
+		}
+		a.app.HasMoreHistory = msg.HasMore
 	case dialog.ScrollToMessageMsg:
 		updated, cmd := a.messages.ScrollToMessage(msg.MessageID)
 		a.messages = updated.(chat.MessagesComponent)

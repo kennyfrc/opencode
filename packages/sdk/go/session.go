@@ -2871,7 +2871,11 @@ func (r SessionMessageParams) URLQuery() (v url.Values) {
 }
 
 type SessionMessagesParams struct {
-	Directory param.Field[string] `query:"directory"`
+	Directory param.Field[string]                         `query:"directory"`
+	Before    param.Field[string]                         `query:"before"`
+	After     param.Field[string]                         `query:"after"`
+	Limit     param.Field[int64]                          `query:"limit"`
+	Direction param.Field[SessionMessagesParamsDirection] `query:"direction"`
 }
 
 // URLQuery serializes [SessionMessagesParams]'s query parameters as `url.Values`.
@@ -2880,6 +2884,21 @@ func (r SessionMessagesParams) URLQuery() (v url.Values) {
 		ArrayFormat:  apiquery.ArrayQueryFormatComma,
 		NestedFormat: apiquery.NestedQueryFormatBrackets,
 	})
+}
+
+type SessionMessagesParamsDirection string
+
+const (
+	SessionMessagesParamsDirectionAsc  SessionMessagesParamsDirection = "asc"
+	SessionMessagesParamsDirectionDesc SessionMessagesParamsDirection = "desc"
+)
+
+func (r SessionMessagesParamsDirection) IsKnown() bool {
+	switch r {
+	case SessionMessagesParamsDirectionAsc, SessionMessagesParamsDirectionDesc:
+		return true
+	}
+	return false
 }
 
 type SessionPromptParams struct {

@@ -5,6 +5,7 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { stream, streamSSE } from "hono/streaming"
 import { Session } from "../session"
+import { Identifier } from "../id/id"
 import z from "zod"
 import { Provider } from "../provider/provider"
 import { mapValues } from "remeda"
@@ -738,9 +739,35 @@ export namespace Server {
             id: z.string().meta({ description: "Session ID" }),
           }),
         ),
+        validator(
+          "query",
+          z.object({
+            before: Identifier.schema("message").optional(),
+            after: Identifier.schema("message").optional(),
+            limit: z.coerce.number().int().positive().max(500).optional(),
+            direction: z.enum(["asc", "desc"]).optional(),
+          }),
+        ),
         async (c) => {
-          const messages = await Session.messages(c.req.valid("param").id)
-          return c.json(messages)
+          const sessionID = c.req.valid("param").id
+          const query = c.req.valid("query")
+          const hasPaging =
+            query.before !== undefined ||
+            query.after !== undefined ||
+            query.limit !== undefined ||
+            query.direction !== undefined
+          if (!hasPaging) {
+            const messages = await Session.messages(sessionID)
+            return c.json(messages)
+          }
+          const page = await Session.messagesPage({
+            sessionID,
+            before: query.before,
+            after: query.after,
+            limit: query.limit ?? 100,
+            direction: query.direction ?? "asc",
+          })
+          return c.json(page)
         },
       )
       .get(
@@ -1545,10 +1572,14 @@ export namespace Server {
                 properties: {},
               }),
             })
-            const unsub = Bus.subscribeAll(async (event) => {
-              await stream.writeSSE({
-                data: JSON.stringify(event),
-              })
+            const unsub = Bus.subscribeAll((event) => {
+              stream
+                .writeSSE({
+                  data: JSON.stringify(event),
+                })
+                .catch((error) => {
+                  log.error("event stream write failed", { error })
+                })
             })
             await new Promise<void>((resolve) => {
               stream.onAbort(() => {
