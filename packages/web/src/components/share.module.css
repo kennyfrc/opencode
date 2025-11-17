@@ -830,3 +830,23 @@
     display: block;
   }
 }
+
+/* Animated ellipsis for TodoWriteTool status */
+[data-component="tool-title"][data-plan-status="starting"] span[data-slot="name"]::after,
+[data-component="tool-title"][data-plan-status="updating"] span[data-slot="name"]::after {
+  content: "";
+  animation: ellipsis 1.2s steps(4, end) infinite;
+}
+
+[data-component="tool-title"][data-plan-status="completed"] span[data-slot="name"]::after {
+  content: "";
+  animation: none;
+}
+
+@keyframes ellipsis {
+  0%   { content: ""; }
+  25%  { content: "."; }
+  50%  { content: ".."; }
+  75%  { content: "..."; }
+  100% { content: ""; }
+}

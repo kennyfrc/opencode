@@ -884,31 +884,47 @@ func renderToolTitle(
 }
 
 func renderToolAction(name string) string {
+	// Make the status content change over time for shimmer to work
+	frameDuration := int64(200) // milliseconds per frame - faster than shimmer
+	frame := (time.Now().UnixMilli() / frameDuration) % 4
+	
+	var dots string
+	switch frame {
+	case 0:
+		dots = ""
+	case 1:
+		dots = "."
+	case 2:
+		dots = ".."
+	case 3:
+		dots = "..."
+	}
+	
 	switch name {
 	case "task":
-		return "Delegating..."
+		return "Delegating" + dots
 	case "bash":
-		return "Writing command..."
+		return "Writing command" + dots
 	case "edit":
-		return "Preparing edit..."
+		return "Preparing edit" + dots
 	case "webfetch":
-		return "Fetching from the web..."
+		return "Fetching from the web" + dots
 	case "glob":
-		return "Finding files..."
+		return "Finding files" + dots
 	case "grep":
-		return "Searching content..."
+		return "Searching content" + dots
 	case "list":
-		return "Listing directory..."
+		return "Listing directory" + dots
 	case "read":
-		return "Reading file..."
+		return "Reading file" + dots
 	case "write":
-		return "Preparing write..."
+		return "Preparing write" + dots
 	case "todowrite", "todoread":
-		return "Planning..."
+		return "Planning" + dots
 	case "patch":
-		return "Preparing patch..."
+		return "Preparing patch" + dots
 	}
-	return "Working..."
+	return "Working" + dots
 }
 
 func renderArgs(args *map[string]any, titleKey string) string {

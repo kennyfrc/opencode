@@ -3,6 +3,31 @@ import { Part } from "@opencode-ai/ui"
 import { useSync } from "@/context/sync"
 import type { AssistantMessage as AssistantMessageType } from "@opencode-ai/sdk"
 
+// Status item type for animated status
+type StatusItem = { kind: "status"; label: string }
+
+// StatusEllipsis component for animated loading text
+function StatusEllipsis(props: { label: string }) {
+  const [frame, setFrame] = createSignal(0)
+  
+  const interval = setInterval(() => {
+    setFrame(f => (f + 1) % 4)
+  }, 300)
+  
+  onCleanup(() => clearInterval(interval))
+  
+  const text = () => {
+    const dots = ['', '.', '..', '...'][frame()]
+    return props.label + dots
+  }
+  
+  return (
+    <span class="text-12-regular text-text-base whitespace-nowrap truncate w-full">
+      {text()}
+    </span>
+  )
+}
+
 export function MessageProgress(props: { assistantMessages: () => AssistantMessageType[] }) {
   const sync = useSync()
   const items = createMemo(() => props.assistantMessages().flatMap((m) => sync.data.part[m.id]))
@@ -10,7 +35,7 @@ export function MessageProgress(props: { assistantMessages: () => AssistantMessa
   const finishedItems = createMemo(() => [
     "",
     "",
-    "Loading...",
+    { kind: "status", label: "Loading" } as StatusItem,
     ...items().filter(
       (p) =>
         p?.type === "text" ||

@@ -834,7 +834,17 @@ func (m *messagesComponent) renderView() tea.Cmd {
 						if content != "" {
 							partCount++
 							lineCount += lipgloss.Height(content) + 1
+							index := len(blocks)
 							blocks = append(blocks, content)
+							if part.State.Status == opencode.ToolPartStateStatusPending {
+								key := shimmerKey(shimmerBlockTool, part.ID)
+								shimmerBlocks[key] = shimmerBlock{
+									index:     index,
+									kind:      shimmerBlockTool,
+									messageID: casted.ID,
+									partID:    part.ID,
+								}
+							}
 							hasContent = true
 						}
 					case opencode.ReasoningPart:
