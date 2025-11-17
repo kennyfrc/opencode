@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import { createOpencode } from "@opencode-ai/sdk"
 import { Script } from "@opencode-ai/script"
 
 const notes = [] as string[]
@@ -9,7 +8,7 @@ const notes = [] as string[]
 console.log("=== publishing ===\n")
 
 if (!Script.preview) {
-  const previous = await fetch("https://registry.npmjs.org/opencode-ai/latest")
+  const previous = await fetch("https://registry.npmjs.org/opencode-fork/latest")
     .then((res) => {
       if (!res.ok) throw new Error(res.statusText)
       return res.json()
@@ -24,51 +23,17 @@ if (!Script.preview) {
     .filter((line) => line && !line.match(/^\w+ (ignore:|test:|chore:)/i))
     .join("\n")
 
-  const opencode = await createOpencode()
-  const session = await opencode.client.session.create()
   console.log("generating changelog since " + previous)
-  const raw = await opencode.client.session
-    .prompt({
-      path: {
-        id: session.data!.id,
-      },
-      body: {
-        model: {
-          providerID: "opencode",
-          modelID: "kimi-k2",
-        },
-        parts: [
-          {
-            type: "text",
-            text: `
-          Analyze these commits and generate a changelog of all notable user facing changes.
-
-          Commits between ${previous} and HEAD:
-          ${commits}
-
-          - Do NOT make general statements about "improvements", be very specific about what was changed.
-          - Do NOT include any information about code changes if they do not affect the user facing changes.
-          - For commits that are already well-written and descriptive, avoid rewording them. Simply capitalize the first letter, fix any misspellings, and ensure proper English grammar.
-
-          IMPORTANT: ONLY return a bulleted list of changes, do not include any other information. Do not include a preamble like "Based on my analysis..."
-
-          <example>
-          - Added ability to @ mention agents
-          - Fixed a bug where the TUI would render improperly on some terminals
-          </example>
-          `,
-          },
-        ],
-      },
-    })
-    .then((x) => x.data?.parts?.find((y) => y.type === "text")?.text)
-  for (const line of raw?.split("\n") ?? []) {
-    if (line.startsWith("- ")) {
-      notes.push(line)
+  
+  // Simple manual changelog generation
+  for (const line of commits.split("\n")) {
+    if (line && !line.match(/^\w+ (ignore:|test:|chore:)/i)) {
+      const cleanLine = line.replace(/^\w+\s+/, '').replace(/"/g, '')
+      const formattedLine = cleanLine.charAt(0).toUpperCase() + cleanLine.slice(1)
+      notes.push(`- ${formattedLine}`)
     }
   }
   console.log(notes)
-  opencode.server.close()
 }
 
 const pkgjsons = await Array.fromAsync(
