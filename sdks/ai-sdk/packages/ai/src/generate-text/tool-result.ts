@@ -1,6 +1,6 @@
-import { InferToolInput, InferToolOutput } from '@ai-sdk/provider-utils';
-import { ValueOf } from '../../src/util/value-of';
-import { ToolSet } from './tool-set';
+import type { InferToolInput, InferToolOutput } from '@ai-sdk/provider-utils';
+import type { ValueOf } from '../../src/util/value-of';
+import type { ToolSet } from './tool-set';
 
 export type StaticToolResult<TOOLS extends ToolSet> = ValueOf<{
   [NAME in keyof TOOLS]: {

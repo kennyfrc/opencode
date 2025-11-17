@@ -21,7 +21,9 @@ export class InvalidMessageRoleError extends AISDKError {
     this.role = role;
   }
 
-  static isInstance(error: unknown): error is InvalidMessageRoleError {
+  static override isInstance(
+    error: unknown,
+  ): error is InvalidMessageRoleError {
     return AISDKError.hasMarker(error, marker);
   }
 }

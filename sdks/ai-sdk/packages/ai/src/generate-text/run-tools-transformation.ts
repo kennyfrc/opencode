@@ -1,26 +1,24 @@
-import {
-  LanguageModelV3CallWarning,
-  LanguageModelV3StreamPart,
+import type {
+	LanguageModelV3CallWarning,
+	LanguageModelV3StreamPart,
 } from '@ai-sdk/provider';
-import {
-  getErrorMessage,
-  IdGenerator,
-  ModelMessage,
-} from '@ai-sdk/provider-utils';
-import { Tracer } from '@opentelemetry/api';
-import { TelemetrySettings } from '../telemetry/telemetry-settings';
-import { FinishReason, LanguageModelUsage, ProviderMetadata } from '../types';
-import { Source } from '../types/language-model';
+import { getErrorMessage } from '@ai-sdk/provider-utils';
+import type { IdGenerator, ModelMessage } from '@ai-sdk/provider-utils';
+import type { Tracer } from '@opentelemetry/api';
+import type { TelemetrySettings } from '../telemetry/telemetry-settings';
+import type { FinishReason, LanguageModelUsage, ProviderMetadata } from '../types';
+import type { Source } from '../types/language-model';
 import { executeToolCall } from './execute-tool-call';
-import { DefaultGeneratedFileWithType, GeneratedFile } from './generated-file';
+import { DefaultGeneratedFileWithType } from './generated-file';
+import type { GeneratedFile } from './generated-file';
 import { isApprovalNeeded } from './is-approval-needed';
 import { parseToolCall } from './parse-tool-call';
-import { ToolApprovalRequestOutput } from './tool-approval-request-output';
-import { TypedToolCall } from './tool-call';
-import { ToolCallRepairFunction } from './tool-call-repair-function';
-import { TypedToolError } from './tool-error';
-import { TypedToolResult } from './tool-result';
-import { ToolSet } from './tool-set';
+import type { ToolApprovalRequestOutput } from './tool-approval-request-output';
+import type { TypedToolCall } from './tool-call';
+import type { ToolCallRepairFunction } from './tool-call-repair-function';
+import type { TypedToolError } from './tool-error';
+import type { TypedToolResult } from './tool-result';
+import type { ToolSet } from './tool-set';
 
 export type SingleRequestTextStreamPart<TOOLS extends ToolSet> =
   // Text blocks:

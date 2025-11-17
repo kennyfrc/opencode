@@ -1,4 +1,4 @@
-import { JSONSchema7 } from '@ai-sdk/provider';
+import { type JSONSchema7 } from '@ai-sdk/provider';
 
 export const valibotToJsonSchema = (schema: unknown) => {
   return async (): Promise<JSONSchema7> => {

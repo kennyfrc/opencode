@@ -39,7 +39,7 @@ export class NoSuchModelError extends AISDKError {
     this.modelType = modelType;
   }
 
-  static isInstance(error: unknown): error is NoSuchModelError {
+  static override isInstance(error: unknown): error is NoSuchModelError {
     return AISDKError.hasMarker(error, marker);
   }
 }

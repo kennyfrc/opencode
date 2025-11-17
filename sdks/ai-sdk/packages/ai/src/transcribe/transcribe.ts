@@ -1,21 +1,21 @@
-import { JSONObject } from '@ai-sdk/provider';
-import { ProviderOptions, withUserAgentSuffix } from '@ai-sdk/provider-utils';
+import { type JSONObject } from '@ai-sdk/provider';
+import { type ProviderOptions, withUserAgentSuffix } from '@ai-sdk/provider-utils';
 import { NoTranscriptGeneratedError } from '../error/no-transcript-generated-error';
 import { logWarnings } from '../logger/log-warnings';
-import { DataContent } from '../prompt';
+import { type DataContent } from '../prompt';
 import { convertDataContentToUint8Array } from '../prompt/data-content';
 import {
-  TranscriptionWarning,
-  TranscriptionModel,
+  type TranscriptionWarning,
+  type TranscriptionModel,
 } from '../types/transcription-model';
-import { TranscriptionModelResponseMetadata } from '../types/transcription-model-response-metadata';
+import { type TranscriptionModelResponseMetadata } from '../types/transcription-model-response-metadata';
 import {
   audioMediaTypeSignatures,
   detectMediaType,
 } from '../util/detect-media-type';
 import { download } from '../util/download/download';
 import { prepareRetries } from '../util/prepare-retries';
-import { TranscriptionResult } from './transcribe-result';
+import { type TranscriptionResult } from './transcribe-result';
 import { VERSION } from '../version';
 import { resolveTranscriptionModel } from '../model/resolve-model';
 /**

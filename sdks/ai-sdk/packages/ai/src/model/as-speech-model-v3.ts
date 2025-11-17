@@ -1,4 +1,4 @@
-import { SpeechModelV2, SpeechModelV3 } from '@ai-sdk/provider';
+import type { SpeechModelV2, SpeechModelV3 } from '@ai-sdk/provider';
 
 export function asSpeechModelV3(
   model: SpeechModelV3 | SpeechModelV2,

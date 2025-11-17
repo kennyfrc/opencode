@@ -25,7 +25,7 @@ export class InvalidResponseDataError extends AISDKError {
     this.data = data;
   }
 
-  static isInstance(error: unknown): error is InvalidResponseDataError {
+  static override isInstance(error: unknown): error is InvalidResponseDataError {
     return AISDKError.hasMarker(error, marker);
   }
 }

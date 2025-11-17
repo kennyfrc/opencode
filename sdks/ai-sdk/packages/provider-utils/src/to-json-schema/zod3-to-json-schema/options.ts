@@ -1,6 +1,6 @@
-import { ZodSchema, ZodTypeDef } from 'zod/v3';
-import { Refs, Seen } from './refs';
-import { JsonSchema7Type } from './parse-types';
+import { ZodSchema, type ZodTypeDef } from 'zod/v3';
+import { type Refs, type Seen } from './refs';
+import { type JsonSchema7Type } from './parse-types';
 
 export type DateStrategy =
   | 'format:date-time'

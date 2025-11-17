@@ -1,13 +1,13 @@
 import { generateText } from '../generate-text/generate-text';
-import { GenerateTextResult } from '../generate-text/generate-text-result';
-import { Output } from '../generate-text/output';
+import type { GenerateTextResult } from '../generate-text/generate-text-result';
+import type { Output } from '../generate-text/output';
 import { stepCountIs } from '../generate-text/stop-condition';
 import { streamText } from '../generate-text/stream-text';
-import { StreamTextResult } from '../generate-text/stream-text-result';
-import { ToolSet } from '../generate-text/tool-set';
-import { Prompt } from '../prompt';
-import { Agent, AgentCallParameters } from './agent';
-import { ToolLoopAgentSettings } from './tool-loop-agent-settings';
+import type { StreamTextResult } from '../generate-text/stream-text-result';
+import type { ToolSet } from '../generate-text/tool-set';
+import type { Prompt } from '../prompt';
+import type { Agent, AgentCallParameters } from './agent';
+import type { ToolLoopAgentSettings } from './tool-loop-agent-settings';
 
 /**
  * A tool loop agent is an agent that runs tools in a loop. In each step,

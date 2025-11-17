@@ -10,8 +10,8 @@ const symbol = Symbol.for(marker);
 export class GatewayInvalidRequestError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'invalid_request_error';
+  override readonly name = name;
+  override readonly type = 'invalid_request_error';
 
   constructor({
     message = 'Invalid request',
@@ -25,7 +25,7 @@ export class GatewayInvalidRequestError extends GatewayError {
     super({ message, statusCode, cause });
   }
 
-  static isInstance(error: unknown): error is GatewayInvalidRequestError {
+  static override isInstance(error: unknown): error is GatewayInvalidRequestError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 }

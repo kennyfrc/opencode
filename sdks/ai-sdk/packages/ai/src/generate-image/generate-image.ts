@@ -1,5 +1,6 @@
-import { ImageModelV3, ImageModelV3ProviderMetadata } from '@ai-sdk/provider';
-import { ProviderOptions, withUserAgentSuffix } from '@ai-sdk/provider-utils';
+import type { ImageModelV3, ImageModelV3ProviderMetadata } from '@ai-sdk/provider';
+import { withUserAgentSuffix } from '@ai-sdk/provider-utils';
+import type { ProviderOptions } from '@ai-sdk/provider-utils';
 import { NoImageGeneratedError } from '../error/no-image-generated-error';
 import {
   detectMediaType,
@@ -7,16 +8,15 @@ import {
 } from '../util/detect-media-type';
 import { prepareRetries } from '../util/prepare-retries';
 import { UnsupportedModelVersionError } from '../error/unsupported-model-version-error';
-import {
-  DefaultGeneratedFile,
-  GeneratedFile,
-} from '../generate-text/generated-file';
-import { ImageGenerationWarning } from '../types/image-model';
-import { ImageModelResponseMetadata } from '../types/image-model-response-metadata';
-import { GenerateImageResult } from './generate-image-result';
+import { DefaultGeneratedFile } from '../generate-text/generated-file';
+import type { GeneratedFile } from '../generate-text/generated-file';
+import type { ImageGenerationWarning } from '../types/image-model';
+import type { ImageModelResponseMetadata } from '../types/image-model-response-metadata';
+import type { GenerateImageResult } from './generate-image-result';
 import { logWarnings } from '../logger/log-warnings';
 import { VERSION } from '../version';
-import { addImageModelUsage, ImageModelUsage } from '../types/usage';
+import { addImageModelUsage } from '../types/usage';
+import type { ImageModelUsage } from '../types/usage';
 
 /**
 Generates images using an image model.

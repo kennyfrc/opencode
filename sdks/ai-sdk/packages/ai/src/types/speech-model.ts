@@ -1,7 +1,7 @@
 import {
-  SpeechModelV2,
-  SpeechModelV3,
-  SpeechModelV3CallWarning,
+  type SpeechModelV2,
+  type SpeechModelV3,
+  type SpeechModelV3CallWarning,
 } from '@ai-sdk/provider';
 
 /**

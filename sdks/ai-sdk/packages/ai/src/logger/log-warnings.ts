@@ -1,9 +1,9 @@
-import {
-  ImageModelV3CallWarning,
-  LanguageModelV3CallWarning,
-  SharedV3Warning,
-  SpeechModelV3CallWarning,
-  TranscriptionModelV3CallWarning,
+import type {
+	ImageModelV3CallWarning,
+	LanguageModelV3CallWarning,
+	SharedV3Warning,
+	SpeechModelV3CallWarning,
+	TranscriptionModelV3CallWarning,
 } from '@ai-sdk/provider';
 
 export type Warning =

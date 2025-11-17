@@ -10,8 +10,8 @@ const symbol = Symbol.for(marker);
 export class GatewayInternalServerError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'internal_server_error';
+  override readonly name = name;
+  override readonly type = 'internal_server_error';
 
   constructor({
     message = 'Internal server error',
@@ -25,7 +25,7 @@ export class GatewayInternalServerError extends GatewayError {
     super({ message, statusCode, cause });
   }
 
-  static isInstance(error: unknown): error is GatewayInternalServerError {
+  static override isInstance(error: unknown): error is GatewayInternalServerError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 }

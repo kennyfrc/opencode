@@ -1,6 +1,6 @@
 import {
-  LanguageModelV3Message,
-  LanguageModelV3Prompt,
+  type LanguageModelV3Message,
+  type LanguageModelV3Prompt,
 } from '@ai-sdk/provider';
 import { convertDataContentToBase64String } from '../prompt/data-content';
 

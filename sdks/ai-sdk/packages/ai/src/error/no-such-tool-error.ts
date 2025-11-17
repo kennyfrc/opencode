@@ -29,7 +29,7 @@ export class NoSuchToolError extends AISDKError {
     this.availableTools = availableTools;
   }
 
-  static isInstance(error: unknown): error is NoSuchToolError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is NoSuchToolError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

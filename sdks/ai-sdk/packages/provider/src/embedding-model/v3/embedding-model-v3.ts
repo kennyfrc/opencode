@@ -1,6 +1,6 @@
-import { SharedV3Headers, SharedV3ProviderMetadata } from '../../shared';
-import { EmbeddingModelCallOptions } from './embedding-model-v3-call-options';
-import { EmbeddingModelV3Embedding } from './embedding-model-v3-embedding';
+import { type SharedV3Headers, type SharedV3ProviderMetadata } from '../../shared';
+import { type EmbeddingModelCallOptions } from './embedding-model-v3-call-options';
+import { type EmbeddingModelV3Embedding } from './embedding-model-v3-embedding';
 
 /**
 Specification for an embedding model that implements the embedding model

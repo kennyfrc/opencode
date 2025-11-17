@@ -1,8 +1,8 @@
-import { JSONValue, LanguageModelV3ToolResultPart } from '@ai-sdk/provider';
-import { FlexibleSchema } from '../schema';
-import { ModelMessage } from './model-message';
-import { ProviderOptions } from './provider-options';
-import { ToolResultOutput } from './content-part';
+import { type JSONValue, type LanguageModelV3ToolResultPart } from '@ai-sdk/provider';
+import { type FlexibleSchema } from '../schema';
+import { type ModelMessage } from './model-message';
+import { type ProviderOptions } from './provider-options';
+import { type ToolResultOutput } from './content-part';
 
 /**
  * Additional options that are sent into each tool call.

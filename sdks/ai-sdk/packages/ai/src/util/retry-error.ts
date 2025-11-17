@@ -35,7 +35,7 @@ export class RetryError extends AISDKError {
     this.lastError = errors[errors.length - 1];
   }
 
-  static isInstance(error: unknown): error is RetryError {
+  static override isInstance(error: unknown): error is RetryError {
     return AISDKError.hasMarker(error, marker);
   }
 }

@@ -1,9 +1,9 @@
 import { TypeValidationError } from '@ai-sdk/provider';
 import {
-  FlexibleSchema,
+  type FlexibleSchema,
   lazySchema,
-  StandardSchemaV1,
-  Tool,
+  type StandardSchemaV1,
+  type Tool,
   validateTypes,
   zodSchema,
 } from '@ai-sdk/provider-utils';
@@ -11,11 +11,11 @@ import { z } from 'zod/v4';
 import { InvalidArgumentError } from '../error';
 import { providerMetadataSchema } from '../types/provider-metadata';
 import {
-  DataUIPart,
-  InferUIMessageData,
-  InferUIMessageTools,
-  ToolUIPart,
-  UIMessage,
+  type DataUIPart,
+  type InferUIMessageData,
+  type InferUIMessageTools,
+  type ToolUIPart,
+  type UIMessage,
 } from './ui-messages';
 
 const uiMessagesSchema = lazySchema(() =>

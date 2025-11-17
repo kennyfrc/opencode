@@ -10,8 +10,8 @@ const symbol = Symbol.for(marker);
 export class GatewayRateLimitError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'rate_limit_exceeded';
+  override readonly name = name;
+  override readonly type = 'rate_limit_exceeded';
 
   constructor({
     message = 'Rate limit exceeded',
@@ -25,7 +25,7 @@ export class GatewayRateLimitError extends GatewayError {
     super({ message, statusCode, cause });
   }
 
-  static isInstance(error: unknown): error is GatewayRateLimitError {
+  static override isInstance(error: unknown): error is GatewayRateLimitError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 }

@@ -23,7 +23,7 @@ export class TypeValidationError extends AISDKError {
     this.value = value;
   }
 
-  static isInstance(error: unknown): error is TypeValidationError {
+  static override isInstance(error: unknown): error is TypeValidationError {
     return AISDKError.hasMarker(error, marker);
   }
 

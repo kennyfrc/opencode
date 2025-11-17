@@ -11,8 +11,8 @@ const symbol = Symbol.for(marker);
 export class GatewayResponseError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'response_error';
+  override readonly name = name;
+  override readonly type = 'response_error';
   readonly response?: unknown;
   readonly validationError?: TypeValidationError;
 
@@ -34,7 +34,7 @@ export class GatewayResponseError extends GatewayError {
     this.validationError = validationError;
   }
 
-  static isInstance(error: unknown): error is GatewayResponseError {
+  static override isInstance(error: unknown): error is GatewayResponseError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 }

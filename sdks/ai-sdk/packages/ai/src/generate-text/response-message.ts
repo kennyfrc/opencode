@@ -1,6 +1,6 @@
-import {
-  AssistantModelMessage,
-  ToolModelMessage,
+import type {
+	AssistantModelMessage,
+	ToolModelMessage,
 } from '@ai-sdk/provider-utils';
 
 /**

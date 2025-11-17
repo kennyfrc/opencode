@@ -14,7 +14,7 @@ export namespace ProviderTransform {
             }
           }
           return part
-        })
+        }) as typeof msg.content
       }
       return msg
     })
@@ -45,16 +45,18 @@ export namespace ProviderTransform {
       if (shouldUseContentOptions) {
         const lastContent = msg.content[msg.content.length - 1]
         if (lastContent && typeof lastContent === "object") {
-          lastContent.providerOptions = {
-            ...lastContent.providerOptions,
+          const contentWithOptions = lastContent as { providerOptions?: Record<string, any> }
+          contentWithOptions.providerOptions = {
+            ...contentWithOptions.providerOptions,
             ...providerOptions,
           }
           continue
         }
       }
 
-      msg.providerOptions = {
-        ...msg.providerOptions,
+      const messageWithOptions = msg as { providerOptions?: Record<string, any> }
+      messageWithOptions.providerOptions = {
+        ...messageWithOptions.providerOptions,
         ...providerOptions,
       }
     }

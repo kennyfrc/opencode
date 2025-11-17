@@ -1,16 +1,16 @@
 import { z } from 'zod/v4';
 import {
-  ProviderMetadata,
+  type ProviderMetadata,
   providerMetadataSchema,
 } from '../types/provider-metadata';
-import { FinishReason } from '../types/language-model';
+import { type FinishReason } from '../types/language-model';
 import {
-  InferUIMessageData,
-  InferUIMessageMetadata,
-  UIDataTypes,
-  UIMessage,
+  type InferUIMessageData,
+  type InferUIMessageMetadata,
+  type UIDataTypes,
+  type UIMessage,
 } from '../ui/ui-messages';
-import { ValueOf } from '../util/value-of';
+import { type ValueOf } from '../util/value-of';
 import { lazySchema, zodSchema } from '@ai-sdk/provider-utils';
 
 export const uiMessageChunkSchema = lazySchema(() =>

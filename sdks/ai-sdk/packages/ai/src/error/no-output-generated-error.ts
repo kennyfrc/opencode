@@ -20,7 +20,7 @@ export class NoOutputGeneratedError extends AISDKError {
     super({ name, message, cause });
   }
 
-  static isInstance(error: unknown): error is NoOutputGeneratedError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is NoOutputGeneratedError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

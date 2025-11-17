@@ -1,7 +1,7 @@
 import { AISDKError } from '@ai-sdk/provider';
-import { FinishReason } from '../types/language-model';
-import { LanguageModelResponseMetadata } from '../types/language-model-response-metadata';
-import { LanguageModelUsage } from '../types/usage';
+import type { FinishReason } from '../types/language-model';
+import type { LanguageModelResponseMetadata } from '../types/language-model-response-metadata';
+import type { LanguageModelUsage } from '../types/usage';
 
 const name = 'AI_NoObjectGeneratedError';
 const marker = `vercel.ai.error.${name}`;
@@ -64,7 +64,7 @@ export class NoObjectGeneratedError extends AISDKError {
     this.finishReason = finishReason;
   }
 
-  static isInstance(error: unknown): error is NoObjectGeneratedError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is NoObjectGeneratedError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

@@ -1,5 +1,5 @@
 import { AISDKError } from '@ai-sdk/provider';
-import { SingleRequestTextStreamPart } from '../generate-text/run-tools-transformation';
+import type { SingleRequestTextStreamPart } from '../generate-text/run-tools-transformation';
 
 const name = 'AI_InvalidStreamPartError';
 const marker = `vercel.ai.error.${name}`;
@@ -22,7 +22,7 @@ export class InvalidStreamPartError extends AISDKError {
     this.chunk = chunk;
   }
 
-  static isInstance(error: unknown): error is InvalidStreamPartError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is InvalidStreamPartError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

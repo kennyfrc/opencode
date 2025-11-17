@@ -1,16 +1,16 @@
 import { gateway } from '@ai-sdk/gateway';
-import {
-  EmbeddingModelV3,
-  LanguageModelV3,
-  ProviderV3,
-  SpeechModelV3,
-  TranscriptionModelV3,
+import type {
+	EmbeddingModelV3,
+	LanguageModelV3,
+	ProviderV3,
+	SpeechModelV3,
+	TranscriptionModelV3,
 } from '@ai-sdk/provider';
 import { UnsupportedModelVersionError } from '../error';
-import { EmbeddingModel } from '../types/embedding-model';
-import { LanguageModel } from '../types/language-model';
-import { SpeechModel } from '../types/speech-model';
-import { TranscriptionModel } from '../types/transcription-model';
+import type { EmbeddingModel } from '../types/embedding-model';
+import type { LanguageModel } from '../types/language-model';
+import type { SpeechModel } from '../types/speech-model';
+import type { TranscriptionModel } from '../types/transcription-model';
 import { asEmbeddingModelV3 } from './as-embedding-model-v3';
 import { asLanguageModelV3 } from './as-language-model-v3';
 import { asSpeechModelV3 } from './as-speech-model-v3';

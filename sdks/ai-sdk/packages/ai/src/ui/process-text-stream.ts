@@ -5,7 +5,11 @@ export async function processTextStream({
   stream: ReadableStream<Uint8Array>;
   onTextPart: (chunk: string) => Promise<void> | void;
 }): Promise<void> {
-  const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+  const decoder = new TextDecoderStream() as unknown as ReadableWritablePair<
+    string,
+    Uint8Array<ArrayBufferLike>
+  >;
+  const reader = stream.pipeThrough(decoder).getReader();
   while (true) {
     const { done, value } = await reader.read();
     if (done) {

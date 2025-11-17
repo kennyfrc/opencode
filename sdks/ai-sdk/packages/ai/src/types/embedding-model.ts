@@ -1,7 +1,7 @@
 import {
-  EmbeddingModelV2,
-  EmbeddingModelV3,
-  EmbeddingModelV3Embedding,
+  type EmbeddingModelV2,
+  type EmbeddingModelV3,
+  type EmbeddingModelV3Embedding,
 } from '@ai-sdk/provider';
 
 /**

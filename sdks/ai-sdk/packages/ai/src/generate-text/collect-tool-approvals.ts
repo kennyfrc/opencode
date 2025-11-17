@@ -1,11 +1,11 @@
-import {
-  ModelMessage,
-  ToolApprovalRequest,
-  ToolApprovalResponse,
+import type {
+	ModelMessage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
 } from '@ai-sdk/provider-utils';
-import { TypedToolCall } from './tool-call';
-import { TypedToolResult } from './tool-result';
-import { ToolSet } from './tool-set';
+import type { TypedToolCall } from './tool-call';
+import type { TypedToolResult } from './tool-result';
+import type { ToolSet } from './tool-set';
 
 export type CollectedToolApprovals<TOOLS extends ToolSet> = {
   approvalRequest: ToolApprovalRequest;

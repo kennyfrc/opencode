@@ -1,51 +1,51 @@
-import { JSONSchema7 } from '@ai-sdk/provider';
+import { type JSONSchema7 } from '@ai-sdk/provider';
 import {
   dynamicTool,
   jsonSchema,
-  Tool,
+  type Tool,
   tool,
-  ToolCallOptions,
+  type ToolCallOptions,
 } from '@ai-sdk/provider-utils';
 import { z } from 'zod/v4';
 import { MCPClientError } from '../error/mcp-client-error';
 import {
-  JSONRPCError,
-  JSONRPCNotification,
-  JSONRPCRequest,
-  JSONRPCResponse,
+  type JSONRPCError,
+  type JSONRPCNotification,
+  type JSONRPCRequest,
+  type JSONRPCResponse,
 } from './json-rpc-message';
 import {
   createMcpTransport,
   isCustomMcpTransport,
-  MCPTransport,
-  MCPTransportConfig,
+  type MCPTransport,
+  type MCPTransportConfig,
 } from './mcp-transport';
 import {
-  CallToolResult,
+  type CallToolResult,
   CallToolResultSchema,
-  Configuration as ClientConfiguration,
+  type Configuration as ClientConfiguration,
   InitializeResultSchema,
   LATEST_PROTOCOL_VERSION,
-  ListResourceTemplatesResult,
+  type ListResourceTemplatesResult,
   ListResourceTemplatesResultSchema,
-  ListResourcesResult,
+  type ListResourcesResult,
   ListResourcesResultSchema,
-  ListPromptsResult,
+  type ListPromptsResult,
   ListPromptsResultSchema,
-  ListToolsResult,
+  type ListToolsResult,
   ListToolsResultSchema,
-  McpToolSet,
-  Notification,
-  PaginatedRequest,
-  ReadResourceResult,
+  type McpToolSet,
+  type Notification,
+  type PaginatedRequest,
+  type ReadResourceResult,
   ReadResourceResultSchema,
-  GetPromptResult,
+  type GetPromptResult,
   GetPromptResultSchema,
-  Request,
-  RequestOptions,
-  ServerCapabilities,
+  type Request,
+  type RequestOptions,
+  type ServerCapabilities,
   SUPPORTED_PROTOCOL_VERSIONS,
-  ToolSchemas,
+  type ToolSchemas,
 } from './types';
 
 const CLIENT_VERSION = '1.0.0';

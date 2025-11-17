@@ -1,5 +1,5 @@
-import { LanguageModelV3Usage } from '@ai-sdk/provider';
-import { ImageModelV3Usage } from '@ai-sdk/provider';
+import { type LanguageModelV3Usage } from '@ai-sdk/provider';
+import { type ImageModelV3Usage } from '@ai-sdk/provider';
 
 /**
 Represents the number of tokens used in a prompt and completion.

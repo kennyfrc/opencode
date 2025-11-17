@@ -33,7 +33,7 @@ export class DownloadError extends AISDKError {
     this.statusText = statusText;
   }
 
-  static isInstance(error: unknown): error is DownloadError {
+  static override isInstance(error: unknown): error is DownloadError {
     return AISDKError.hasMarker(error, marker);
   }
 }

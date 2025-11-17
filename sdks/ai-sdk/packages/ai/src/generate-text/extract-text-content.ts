@@ -1,4 +1,4 @@
-import { LanguageModelV3Content, LanguageModelV3Text } from '@ai-sdk/provider';
+import type { LanguageModelV3Content, LanguageModelV3Text } from '@ai-sdk/provider';
 
 export function extractTextContent(
   content: LanguageModelV3Content[],

@@ -53,7 +53,7 @@ export class APICallError extends AISDKError {
     this.data = data;
   }
 
-  static isInstance(error: unknown): error is APICallError {
+  static override isInstance(error: unknown): error is APICallError {
     return AISDKError.hasMarker(error, marker);
   }
 }

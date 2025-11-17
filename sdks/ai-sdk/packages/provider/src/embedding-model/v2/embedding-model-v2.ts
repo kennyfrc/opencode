@@ -1,9 +1,9 @@
 import {
-  SharedV2Headers,
-  SharedV2ProviderOptions,
-  SharedV2ProviderMetadata,
+  type SharedV2Headers,
+  type SharedV2ProviderOptions,
+  type SharedV2ProviderMetadata,
 } from '../../shared';
-import { EmbeddingModelV2Embedding } from './embedding-model-v2-embedding';
+import { type EmbeddingModelV2Embedding } from './embedding-model-v2-embedding';
 
 /**
 Specification for an embedding model that implements the embedding model

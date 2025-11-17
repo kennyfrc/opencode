@@ -1,4 +1,4 @@
-import { Span, SpanContext, Tracer } from '@opentelemetry/api';
+import { type Span, type SpanContext, type Tracer } from '@opentelemetry/api';
 
 /**
  * Tracer implementation that does nothing (null object).

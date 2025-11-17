@@ -27,7 +27,7 @@ export class InvalidPromptError extends AISDKError {
     this.prompt = prompt;
   }
 
-  static isInstance(error: unknown): error is InvalidPromptError {
+  static override isInstance(error: unknown): error is InvalidPromptError {
     return AISDKError.hasMarker(error, marker);
   }
 }

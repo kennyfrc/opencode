@@ -1,16 +1,16 @@
 import pkceChallenge from 'pkce-challenge';
 import {
-  OAuthTokens,
-  OAuthProtectedResourceMetadata,
+  type OAuthTokens,
+  type OAuthProtectedResourceMetadata,
   OAuthProtectedResourceMetadataSchema,
   OAuthMetadataSchema,
   OpenIdProviderDiscoveryMetadataSchema,
-  AuthorizationServerMetadata,
-  OAuthClientInformation,
+  type AuthorizationServerMetadata,
+  type OAuthClientInformation,
   OAuthTokensSchema,
   OAuthErrorResponseSchema,
-  OAuthClientMetadata,
-  OAuthClientInformationFull,
+  type OAuthClientMetadata,
+  type OAuthClientInformationFull,
   OAuthClientInformationFullSchema,
 } from './oauth-types';
 import {
@@ -26,7 +26,7 @@ import {
   checkResourceAllowed,
 } from '../util/oauth-util';
 import { LATEST_PROTOCOL_VERSION } from './types';
-import { FetchFunction } from '@ai-sdk/provider-utils';
+import { type FetchFunction } from '@ai-sdk/provider-utils';
 
 export type AuthResult = 'AUTHORIZED' | 'REDIRECT';
 

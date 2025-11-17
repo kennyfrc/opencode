@@ -1,6 +1,6 @@
-import { StepResult } from '../generate-text/step-result';
-import { ToolSet } from '../generate-text/tool-set';
-import { LanguageModelUsage } from '../types/usage';
+import type { StepResult } from '../generate-text/step-result';
+import type { ToolSet } from '../generate-text/tool-set';
+import type { LanguageModelUsage } from '../types/usage';
 
 /**
 Callback that is set using the `onFinish` option.

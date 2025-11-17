@@ -11,7 +11,7 @@ export class LoadSettingError extends AISDKError {
     super({ name, message });
   }
 
-  static isInstance(error: unknown): error is LoadSettingError {
+  static override isInstance(error: unknown): error is LoadSettingError {
     return AISDKError.hasMarker(error, marker);
   }
 }

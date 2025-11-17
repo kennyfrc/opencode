@@ -1,7 +1,7 @@
 import {
-  TranscriptionModelV2,
-  TranscriptionModelV3,
-  TranscriptionModelV3CallWarning,
+  type TranscriptionModelV2,
+  type TranscriptionModelV3,
+  type TranscriptionModelV3CallWarning,
 } from '@ai-sdk/provider';
 
 /**

@@ -1,12 +1,12 @@
-import { SharedV3Headers } from '../../shared';
-import { SharedV3ProviderMetadata } from '../../shared/v3/shared-v3-provider-metadata';
-import { LanguageModelV3CallOptions } from './language-model-v3-call-options';
-import { LanguageModelV3CallWarning } from './language-model-v3-call-warning';
-import { LanguageModelV3Content } from './language-model-v3-content';
-import { LanguageModelV3FinishReason } from './language-model-v3-finish-reason';
-import { LanguageModelV3ResponseMetadata } from './language-model-v3-response-metadata';
-import { LanguageModelV3StreamPart } from './language-model-v3-stream-part';
-import { LanguageModelV3Usage } from './language-model-v3-usage';
+import { type SharedV3Headers } from '../../shared';
+import { type SharedV3ProviderMetadata } from '../../shared/v3/shared-v3-provider-metadata';
+import { type LanguageModelV3CallOptions } from './language-model-v3-call-options';
+import { type LanguageModelV3CallWarning } from './language-model-v3-call-warning';
+import { type LanguageModelV3Content } from './language-model-v3-content';
+import { type LanguageModelV3FinishReason } from './language-model-v3-finish-reason';
+import { type LanguageModelV3ResponseMetadata } from './language-model-v3-response-metadata';
+import { type LanguageModelV3StreamPart } from './language-model-v3-stream-part';
+import { type LanguageModelV3Usage } from './language-model-v3-usage';
 
 /**
 Specification for a language model that implements the language model interface version 3.

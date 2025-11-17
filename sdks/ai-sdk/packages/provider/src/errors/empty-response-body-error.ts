@@ -11,7 +11,7 @@ export class EmptyResponseBodyError extends AISDKError {
     super({ name, message });
   }
 
-  static isInstance(error: unknown): error is EmptyResponseBodyError {
+  static override isInstance(error: unknown): error is EmptyResponseBodyError {
     return AISDKError.hasMarker(error, marker);
   }
 }

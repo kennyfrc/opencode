@@ -1,11 +1,11 @@
 import {
   parseJsonEventStream,
-  ParseResult,
+  type ParseResult,
   withUserAgentSuffix,
   getRuntimeEnvironmentUserAgent,
 } from '@ai-sdk/provider-utils';
 import {
-  UIMessageChunk,
+  type UIMessageChunk,
   uiMessageChunkSchema,
 } from '../ui-message-stream/ui-message-chunks';
 import { consumeStream } from '../util/consume-stream';

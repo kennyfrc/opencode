@@ -30,7 +30,7 @@ export class MCPClientError extends AISDKError {
     this.code = code;
   }
 
-  static isInstance(error: unknown): error is MCPClientError {
+  static override isInstance(error: unknown): error is MCPClientError {
     return AISDKError.hasMarker(error, marker);
   }
 }

@@ -11,7 +11,7 @@ export class LoadAPIKeyError extends AISDKError {
     super({ name, message });
   }
 
-  static isInstance(error: unknown): error is LoadAPIKeyError {
+  static override isInstance(error: unknown): error is LoadAPIKeyError {
     return AISDKError.hasMarker(error, marker);
   }
 }

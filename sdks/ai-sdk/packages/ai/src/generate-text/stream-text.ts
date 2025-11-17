@@ -1,25 +1,21 @@
+import { getErrorMessage } from '@ai-sdk/provider';
+import type { LanguageModelV3, LanguageModelV3CallWarning } from '@ai-sdk/provider';
 import {
-  getErrorMessage,
-  LanguageModelV3,
-  LanguageModelV3CallWarning,
-} from '@ai-sdk/provider';
-import {
-  createIdGenerator,
-  IdGenerator,
-  isAbortError,
-  ProviderOptions,
+	createIdGenerator,
+	isAbortError,
 } from '@ai-sdk/provider-utils';
-import { Span } from '@opentelemetry/api';
-import { ServerResponse } from 'node:http';
+import type { IdGenerator, ProviderOptions } from '@ai-sdk/provider-utils';
+import type { Span } from '@opentelemetry/api';
+import type { ServerResponse } from 'node:http';
 import { NoOutputGeneratedError } from '../error';
 import { logWarnings } from '../logger/log-warnings';
 import { resolveLanguageModel } from '../model/resolve-model';
-import { CallSettings } from '../prompt/call-settings';
+import type { CallSettings } from '../prompt/call-settings';
 import { convertToLanguageModelPrompt } from '../prompt/convert-to-language-model-prompt';
 import { createToolModelOutput } from '../prompt/create-tool-model-output';
 import { prepareCallSettings } from '../prompt/prepare-call-settings';
 import { prepareToolsAndToolChoice } from '../prompt/prepare-tools-and-tool-choice';
-import { Prompt } from '../prompt/prompt';
+import type { Prompt } from '../prompt/prompt';
 import { standardizePrompt } from '../prompt/standardize-prompt';
 import { wrapGatewayError } from '../prompt/wrap-gateway-error';
 import { assembleOperationName } from '../telemetry/assemble-operation-name';
@@ -28,69 +24,65 @@ import { getTracer } from '../telemetry/get-tracer';
 import { recordSpan } from '../telemetry/record-span';
 import { selectTelemetryAttributes } from '../telemetry/select-telemetry-attributes';
 import { stringifyForTelemetry } from '../telemetry/stringify-for-telemetry';
-import { TelemetrySettings } from '../telemetry/telemetry-settings';
+import type { TelemetrySettings } from '../telemetry/telemetry-settings';
 import { createTextStreamResponse } from '../text-stream/create-text-stream-response';
 import { pipeTextStreamToResponse } from '../text-stream/pipe-text-stream-to-response';
-import { LanguageModelRequestMetadata } from '../types';
-import {
-  CallWarning,
-  FinishReason,
-  LanguageModel,
-  ToolChoice,
+import type { LanguageModelRequestMetadata } from '../types';
+import type {
+	CallWarning,
+	FinishReason,
+	LanguageModel,
+	ToolChoice,
 } from '../types/language-model';
-import { ProviderMetadata } from '../types/provider-metadata';
-import { addLanguageModelUsage, LanguageModelUsage } from '../types/usage';
-import { UIMessage } from '../ui';
+import type { ProviderMetadata } from '../types/provider-metadata';
+import { addLanguageModelUsage } from '../types/usage';
+import type { LanguageModelUsage } from '../types/usage';
+import type { UIMessage } from '../ui';
 import { createUIMessageStreamResponse } from '../ui-message-stream/create-ui-message-stream-response';
 import { getResponseUIMessageId } from '../ui-message-stream/get-response-ui-message-id';
 import { handleUIMessageStreamFinish } from '../ui-message-stream/handle-ui-message-stream-finish';
 import { pipeUIMessageStreamToResponse } from '../ui-message-stream/pipe-ui-message-stream-to-response';
-import {
-  InferUIMessageChunk,
-  UIMessageChunk,
+import type {
+	InferUIMessageChunk,
+	UIMessageChunk,
 } from '../ui-message-stream/ui-message-chunks';
-import { UIMessageStreamResponseInit } from '../ui-message-stream/ui-message-stream-response-init';
-import { InferUIMessageData, InferUIMessageMetadata } from '../ui/ui-messages';
+import type { UIMessageStreamResponseInit } from '../ui-message-stream/ui-message-stream-response-init';
+import type { InferUIMessageData, InferUIMessageMetadata } from '../ui/ui-messages';
 import { asArray } from '../util/as-array';
-import {
-  AsyncIterableStream,
-  createAsyncIterableStream,
-} from '../util/async-iterable-stream';
+import { createAsyncIterableStream } from '../util/async-iterable-stream';
+import type { AsyncIterableStream } from '../util/async-iterable-stream';
 import { consumeStream } from '../util/consume-stream';
 import { createStitchableStream } from '../util/create-stitchable-stream';
 import { DelayedPromise } from '../util/delayed-promise';
-import { DownloadFunction } from '../util/download/download-function';
+import type { DownloadFunction } from '../util/download/download-function';
 import { now as originalNow } from '../util/now';
 import { prepareRetries } from '../util/prepare-retries';
 import { collectToolApprovals } from './collect-tool-approvals';
-import { ContentPart } from './content-part';
+import type { ContentPart } from './content-part';
 import { executeToolCall } from './execute-tool-call';
-import { Output, text } from './output';
-import { InferCompleteOutput, InferPartialOutput } from './output-utils';
-import { PrepareStepFunction } from './prepare-step';
-import { ResponseMessage } from './response-message';
-import {
-  runToolsTransformation,
-  SingleRequestTextStreamPart,
-} from './run-tools-transformation';
-import { DefaultStepResult, StepResult } from './step-result';
-import {
-  isStopConditionMet,
-  stepCountIs,
-  StopCondition,
-} from './stop-condition';
-import {
-  ConsumeStreamOptions,
-  StreamTextResult,
-  TextStreamPart,
-  UIMessageStreamOptions,
+import { text } from './output';
+import type { Output } from './output';
+import type { InferCompleteOutput, InferPartialOutput } from './output-utils';
+import type { PrepareStepFunction } from './prepare-step';
+import type { ResponseMessage } from './response-message';
+import { runToolsTransformation } from './run-tools-transformation';
+import type { SingleRequestTextStreamPart } from './run-tools-transformation';
+import { DefaultStepResult } from './step-result';
+import type { StepResult } from './step-result';
+import { isStopConditionMet, stepCountIs } from './stop-condition';
+import type { StopCondition } from './stop-condition';
+import type {
+	ConsumeStreamOptions,
+	StreamTextResult,
+	TextStreamPart,
+	UIMessageStreamOptions,
 } from './stream-text-result';
 import { toResponseMessages } from './to-response-messages';
-import { TypedToolCall } from './tool-call';
-import { ToolCallRepairFunction } from './tool-call-repair-function';
-import { ToolOutput } from './tool-output';
-import { StaticToolOutputDenied } from './tool-output-denied';
-import { ToolSet } from './tool-set';
+import type { TypedToolCall } from './tool-call';
+import type { ToolCallRepairFunction } from './tool-call-repair-function';
+import type { ToolOutput } from './tool-output';
+import type { StaticToolOutputDenied } from './tool-output-denied';
+import type { ToolSet } from './tool-set';
 
 const originalGenerateId = createIdGenerator({
   prefix: 'aitxt',

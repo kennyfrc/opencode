@@ -1,9 +1,9 @@
 import {
-  AssistantModelMessage,
-  ModelMessage,
-  SystemModelMessage,
-  ToolModelMessage,
-  UserModelMessage,
+  type AssistantModelMessage,
+  type ModelMessage,
+  type SystemModelMessage,
+  type ToolModelMessage,
+  type UserModelMessage,
 } from '@ai-sdk/provider-utils';
 import { z } from 'zod/v4';
 import { providerMetadataSchema } from '../types/provider-metadata';

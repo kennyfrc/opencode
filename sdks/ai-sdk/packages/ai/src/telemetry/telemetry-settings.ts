@@ -1,4 +1,4 @@
-import { AttributeValue, Tracer } from '@opentelemetry/api';
+import { type AttributeValue, type Tracer } from '@opentelemetry/api';
 
 /**
  * Telemetry configuration.

@@ -1,5 +1,5 @@
-import { EmbeddingModelV3 } from '../../embedding-model/v3/embedding-model-v3';
-import { EmbeddingModelCallOptions } from '../../embedding-model/v3/embedding-model-v3-call-options';
+import { type EmbeddingModelV3 } from '../../embedding-model/v3/embedding-model-v3';
+import { type EmbeddingModelCallOptions } from '../../embedding-model/v3/embedding-model-v3-call-options';
 
 /**
  * Middleware for EmbeddingModelV3.

@@ -1,6 +1,6 @@
-import { InferToolInput } from '@ai-sdk/provider-utils';
-import { ValueOf } from '../util/value-of';
-import { ToolSet } from './tool-set';
+import type { InferToolInput } from '@ai-sdk/provider-utils';
+import type { ValueOf } from '../util/value-of';
+import type { ToolSet } from './tool-set';
 
 export type StaticToolError<TOOLS extends ToolSet> = ValueOf<{
   [NAME in keyof TOOLS]: {

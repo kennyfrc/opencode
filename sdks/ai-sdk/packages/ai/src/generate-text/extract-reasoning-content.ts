@@ -1,6 +1,6 @@
-import {
-  LanguageModelV3Content,
-  LanguageModelV3Reasoning,
+import type {
+	LanguageModelV3Content,
+	LanguageModelV3Reasoning,
 } from '@ai-sdk/provider';
 
 export function extractReasoningContent(

@@ -1,4 +1,4 @@
-import { SharedV3ProviderOptions } from '../../shared';
+import { type SharedV3ProviderOptions } from '../../shared';
 
 export type ImageModelV3CallOptions = {
   /**

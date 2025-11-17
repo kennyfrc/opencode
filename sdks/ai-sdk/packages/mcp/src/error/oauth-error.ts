@@ -22,7 +22,7 @@ export class MCPClientOAuthError extends AISDKError {
     super({ name, message, cause });
   }
 
-  static isInstance(error: unknown): error is MCPClientOAuthError {
+  static override isInstance(error: unknown): error is MCPClientOAuthError {
     return AISDKError.hasMarker(error, marker);
   }
 }

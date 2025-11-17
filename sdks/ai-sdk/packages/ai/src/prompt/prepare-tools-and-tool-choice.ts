@@ -1,12 +1,12 @@
 import {
-  LanguageModelV3FunctionTool,
-  LanguageModelV3ProviderDefinedTool,
-  LanguageModelV3ToolChoice,
+  type LanguageModelV3FunctionTool,
+  type LanguageModelV3ProviderDefinedTool,
+  type LanguageModelV3ToolChoice,
 } from '@ai-sdk/provider';
 import { asSchema } from '@ai-sdk/provider-utils';
 import { isNonEmptyObject } from '../util/is-non-empty-object';
-import { ToolSet } from '../generate-text';
-import { ToolChoice } from '../types/language-model';
+import { type ToolSet } from '../generate-text';
+import { type ToolChoice } from '../types/language-model';
 
 export async function prepareToolsAndToolChoice<TOOLS extends ToolSet>({
   tools,

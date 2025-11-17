@@ -1,4 +1,4 @@
-import { EmbeddingModelV2, EmbeddingModelV3 } from '@ai-sdk/provider';
+import type { EmbeddingModelV2, EmbeddingModelV3 } from '@ai-sdk/provider';
 
 export function asEmbeddingModelV3<VALUE>(
   model: EmbeddingModelV2<VALUE> | EmbeddingModelV3<VALUE>,

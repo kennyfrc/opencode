@@ -24,7 +24,7 @@ export class ToolCallRepairError extends AISDKError {
     this.originalError = originalError;
   }
 
-  static isInstance(error: unknown): error is ToolCallRepairError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is ToolCallRepairError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

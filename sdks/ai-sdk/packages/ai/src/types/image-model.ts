@@ -1,7 +1,7 @@
 import {
-  ImageModelV3,
-  ImageModelV3CallWarning,
-  ImageModelV3ProviderMetadata,
+  type ImageModelV3,
+  type ImageModelV3CallWarning,
+  type ImageModelV3ProviderMetadata,
 } from '@ai-sdk/provider';
 
 /**

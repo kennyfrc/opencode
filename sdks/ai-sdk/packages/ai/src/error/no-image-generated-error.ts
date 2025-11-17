@@ -1,5 +1,5 @@
 import { AISDKError } from '@ai-sdk/provider';
-import { ImageModelResponseMetadata } from '../types/image-model-response-metadata';
+import type { ImageModelResponseMetadata } from '../types/image-model-response-metadata';
 
 const name = 'AI_NoImageGeneratedError';
 const marker = `vercel.ai.error.${name}`;
@@ -33,7 +33,7 @@ The response metadata for each call.
     this.responses = responses;
   }
 
-  static isInstance(error: unknown): error is NoImageGeneratedError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is NoImageGeneratedError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

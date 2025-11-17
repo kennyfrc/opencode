@@ -25,7 +25,7 @@ export class JSONParseError extends AISDKError {
     this.text = text;
   }
 
-  static isInstance(error: unknown): error is JSONParseError {
+  static override isInstance(error: unknown): error is JSONParseError {
     return AISDKError.hasMarker(error, marker);
   }
 }

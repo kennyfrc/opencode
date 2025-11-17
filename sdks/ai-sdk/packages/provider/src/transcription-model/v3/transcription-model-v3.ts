@@ -1,7 +1,7 @@
-import { JSONObject } from '../../json-value';
-import { SharedV3Headers } from '../../shared';
-import { TranscriptionModelV3CallOptions } from './transcription-model-v3-call-options';
-import { TranscriptionModelV3CallWarning } from './transcription-model-v3-call-warning';
+import { type JSONObject } from '../../json-value';
+import { type SharedV3Headers } from '../../shared';
+import { type TranscriptionModelV3CallOptions } from './transcription-model-v3-call-options';
+import { type TranscriptionModelV3CallWarning } from './transcription-model-v3-call-warning';
 
 /**
 Transcription model specification version 3.

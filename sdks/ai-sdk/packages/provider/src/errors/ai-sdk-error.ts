@@ -15,7 +15,7 @@ export class AISDKError extends Error {
   /**
    * The underlying cause of the error, if any.
    */
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
 
   /**
    * Creates an AI SDK Error.

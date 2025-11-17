@@ -1,4 +1,4 @@
-import { LanguageModelV2, LanguageModelV3 } from '@ai-sdk/provider';
+import type { LanguageModelV2, LanguageModelV3 } from '@ai-sdk/provider';
 
 export function asLanguageModelV3(
   model: LanguageModelV2 | LanguageModelV3,

@@ -27,7 +27,7 @@ export class InvalidToolInputError extends AISDKError {
     this.toolName = toolName;
   }
 
-  static isInstance(error: unknown): error is InvalidToolInputError {
-    return AISDKError.hasMarker(error, marker);
-  }
+	static override isInstance(error: unknown): error is InvalidToolInputError {
+		return AISDKError.hasMarker(error, marker);
+	}
 }

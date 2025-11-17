@@ -1,21 +1,21 @@
 import {
-  LanguageModelV3FilePart,
-  LanguageModelV3Message,
-  LanguageModelV3Prompt,
-  LanguageModelV3TextPart,
-  LanguageModelV3ToolResultOutput,
+  type LanguageModelV3FilePart,
+  type LanguageModelV3Message,
+  type LanguageModelV3Prompt,
+  type LanguageModelV3TextPart,
+  type LanguageModelV3ToolResultOutput,
 } from '@ai-sdk/provider';
 import {
-  DataContent,
-  FilePart,
-  ImagePart,
+  type DataContent,
+  type FilePart,
+  type ImagePart,
   isUrlSupported,
-  ModelMessage,
-  ReasoningPart,
-  TextPart,
-  ToolCallPart,
-  ToolResultOutput,
-  ToolResultPart,
+  type ModelMessage,
+  type ReasoningPart,
+  type TextPart,
+  type ToolCallPart,
+  type ToolResultOutput,
+  type ToolResultPart,
 } from '@ai-sdk/provider-utils';
 import {
   detectMediaType,
@@ -23,11 +23,11 @@ import {
 } from '../util/detect-media-type';
 import {
   createDefaultDownloadFunction,
-  DownloadFunction,
+  type DownloadFunction,
 } from '../util/download/download-function';
 import { convertToLanguageModelV3DataContent } from './data-content';
 import { InvalidMessageRoleError } from './invalid-message-role-error';
-import { StandardizedPrompt } from './standardize-prompt';
+import { type StandardizedPrompt } from './standardize-prompt';
 
 export async function convertToLanguageModelPrompt({
   prompt,

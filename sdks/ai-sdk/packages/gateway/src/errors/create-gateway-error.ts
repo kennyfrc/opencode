@@ -10,7 +10,7 @@ import {
 import { GatewayInternalServerError } from './gateway-internal-server-error';
 import { GatewayResponseError } from './gateway-response-error';
 import {
-  InferSchema,
+  type InferSchema,
   lazySchema,
   safeValidateTypes,
   validateTypes,

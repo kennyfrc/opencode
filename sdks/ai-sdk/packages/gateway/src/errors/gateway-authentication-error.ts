@@ -10,8 +10,8 @@ const symbol = Symbol.for(marker);
 export class GatewayAuthenticationError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'authentication_error';
+  override readonly name = name;
+  override readonly type = 'authentication_error';
 
   constructor({
     message = 'Authentication failed',
@@ -25,7 +25,7 @@ export class GatewayAuthenticationError extends GatewayError {
     super({ message, statusCode, cause });
   }
 
-  static isInstance(error: unknown): error is GatewayAuthenticationError {
+  static override isInstance(error: unknown): error is GatewayAuthenticationError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 

@@ -336,6 +336,7 @@ export namespace SessionPrompt {
             model: model.language,
             middleware: [
               {
+                specificationVersion: "v3",
                 async transformParams(args) {
                   if (args.type === "stream") {
                     // @ts-expect-error

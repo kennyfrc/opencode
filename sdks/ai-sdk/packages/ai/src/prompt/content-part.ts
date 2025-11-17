@@ -1,13 +1,13 @@
-import {
-  FilePart,
-  ImagePart,
-  ProviderOptions,
-  ReasoningPart,
-  TextPart,
-  ToolApprovalRequest,
-  ToolApprovalResponse,
-  ToolResultOutput,
-  ToolResultPart,
+import type {
+	FilePart,
+	ImagePart,
+	ProviderOptions,
+	ReasoningPart,
+	TextPart,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+	ToolResultOutput,
+	ToolResultPart,
 } from '@ai-sdk/provider-utils';
 import { z } from 'zod/v4';
 import { jsonValueSchema } from '../types/json-value';

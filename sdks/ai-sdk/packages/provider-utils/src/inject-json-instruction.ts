@@ -1,7 +1,7 @@
 import {
-  JSONSchema7,
-  LanguageModelV3Message,
-  LanguageModelV3Prompt,
+  type JSONSchema7,
+  type LanguageModelV3Message,
+  type LanguageModelV3Prompt,
 } from '@ai-sdk/provider';
 
 const DEFAULT_SCHEMA_PREFIX = 'JSON schema:';

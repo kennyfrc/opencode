@@ -1,5 +1,5 @@
-import { LanguageModelV3 } from '../../language-model/v3/language-model-v3';
-import { LanguageModelV3CallOptions } from '../../language-model/v3/language-model-v3-call-options';
+import { type LanguageModelV3 } from '../../language-model/v3/language-model-v3';
+import { type LanguageModelV3CallOptions } from '../../language-model/v3/language-model-v3-call-options';
 
 /**
  * Experimental middleware for LanguageModelV3.

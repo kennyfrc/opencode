@@ -1,12 +1,12 @@
-import { SharedV3ProviderMetadata } from '../../shared/v3/shared-v3-provider-metadata';
-import { LanguageModelV3CallWarning } from './language-model-v3-call-warning';
-import { LanguageModelV3File } from './language-model-v3-file';
-import { LanguageModelV3FinishReason } from './language-model-v3-finish-reason';
-import { LanguageModelV3ResponseMetadata } from './language-model-v3-response-metadata';
-import { LanguageModelV3Source } from './language-model-v3-source';
-import { LanguageModelV3ToolCall } from './language-model-v3-tool-call';
-import { LanguageModelV3ToolResult } from './language-model-v3-tool-result';
-import { LanguageModelV3Usage } from './language-model-v3-usage';
+import { type SharedV3ProviderMetadata } from '../../shared/v3/shared-v3-provider-metadata';
+import { type LanguageModelV3CallWarning } from './language-model-v3-call-warning';
+import { type LanguageModelV3File } from './language-model-v3-file';
+import { type LanguageModelV3FinishReason } from './language-model-v3-finish-reason';
+import { type LanguageModelV3ResponseMetadata } from './language-model-v3-response-metadata';
+import { type LanguageModelV3Source } from './language-model-v3-source';
+import { type LanguageModelV3ToolCall } from './language-model-v3-tool-call';
+import { type LanguageModelV3ToolResult } from './language-model-v3-tool-result';
+import { type LanguageModelV3Usage } from './language-model-v3-usage';
 
 export type LanguageModelV3StreamPart =
   // Text blocks:

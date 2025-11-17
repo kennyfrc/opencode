@@ -1,8 +1,8 @@
-import { ModelMessage } from '@ai-sdk/provider-utils';
-import { GenerateTextResult } from '../generate-text/generate-text-result';
-import { Output } from '../generate-text/output';
-import { StreamTextResult } from '../generate-text/stream-text-result';
-import { ToolSet } from '../generate-text/tool-set';
+import type { ModelMessage } from '@ai-sdk/provider-utils';
+import type { GenerateTextResult } from '../generate-text/generate-text-result';
+import type { Output } from '../generate-text/output';
+import type { StreamTextResult } from '../generate-text/stream-text-result';
+import type { ToolSet } from '../generate-text/tool-set';
 
 export type AgentCallParameters<CALL_OPTIONS> = ([CALL_OPTIONS] extends [never]
   ? { options?: never }

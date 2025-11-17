@@ -1,19 +1,20 @@
-import { JSONObject } from '@ai-sdk/provider';
-import { ProviderOptions, withUserAgentSuffix } from '@ai-sdk/provider-utils';
+import type { JSONObject } from '@ai-sdk/provider';
+import { withUserAgentSuffix } from '@ai-sdk/provider-utils';
+import type { ProviderOptions } from '@ai-sdk/provider-utils';
 import { NoSpeechGeneratedError } from '../error/no-speech-generated-error';
 import { logWarnings } from '../logger/log-warnings';
-import { SpeechWarning, SpeechModel } from '../types/speech-model';
-import { SpeechModelResponseMetadata } from '../types/speech-model-response-metadata';
+import type { SpeechWarning, SpeechModel } from '../types/speech-model';
+import type { SpeechModelResponseMetadata } from '../types/speech-model-response-metadata';
 import {
   audioMediaTypeSignatures,
   detectMediaType,
 } from '../util/detect-media-type';
 import { prepareRetries } from '../util/prepare-retries';
-import { SpeechResult } from './generate-speech-result';
+import type { SpeechResult } from './generate-speech-result';
 import {
-  DefaultGeneratedAudioFile,
-  GeneratedAudioFile,
+	DefaultGeneratedAudioFile,
 } from './generated-audio-file';
+import type { GeneratedAudioFile } from './generated-audio-file';
 import { VERSION } from '../version';
 import { resolveSpeechModel } from '../model/resolve-model';
 /**

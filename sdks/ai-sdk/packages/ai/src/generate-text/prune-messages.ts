@@ -1,7 +1,7 @@
-import {
-  AssistantModelMessage,
-  ModelMessage,
-  ToolModelMessage,
+import type {
+	AssistantModelMessage,
+	ModelMessage,
+	ToolModelMessage,
 } from '@ai-sdk/provider-utils';
 
 /**

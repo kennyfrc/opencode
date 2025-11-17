@@ -1,9 +1,9 @@
 import {
-  LanguageModelV2,
-  LanguageModelV3,
-  LanguageModelV3CallWarning,
-  LanguageModelV3FinishReason,
-  LanguageModelV3Source,
+  type LanguageModelV2,
+  type LanguageModelV3,
+  type LanguageModelV3CallWarning,
+  type LanguageModelV3FinishReason,
+  type LanguageModelV3Source,
 } from '@ai-sdk/provider';
 
 /**

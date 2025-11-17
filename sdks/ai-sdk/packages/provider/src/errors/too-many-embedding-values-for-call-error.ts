@@ -32,7 +32,7 @@ export class TooManyEmbeddingValuesForCallError extends AISDKError {
     this.values = options.values;
   }
 
-  static isInstance(
+  static override isInstance(
     error: unknown,
   ): error is TooManyEmbeddingValuesForCallError {
     return AISDKError.hasMarker(error, marker);

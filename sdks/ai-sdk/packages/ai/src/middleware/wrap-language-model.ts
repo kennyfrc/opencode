@@ -1,5 +1,5 @@
-import { LanguageModelV3, LanguageModelV3CallOptions } from '@ai-sdk/provider';
-import { LanguageModelMiddleware } from '../types';
+import type { LanguageModelV3, LanguageModelV3CallOptions } from '@ai-sdk/provider';
+import type { LanguageModelMiddleware } from '../types';
 import { asArray } from '../util/as-array';
 
 /**

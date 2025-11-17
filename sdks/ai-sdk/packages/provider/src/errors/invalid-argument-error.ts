@@ -26,7 +26,7 @@ export class InvalidArgumentError extends AISDKError {
     this.argument = argument;
   }
 
-  static isInstance(error: unknown): error is InvalidArgumentError {
+  static override isInstance(error: unknown): error is InvalidArgumentError {
     return AISDKError.hasMarker(error, marker);
   }
 }

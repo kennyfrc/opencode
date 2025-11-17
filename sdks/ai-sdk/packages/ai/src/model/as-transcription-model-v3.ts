@@ -1,4 +1,4 @@
-import { TranscriptionModelV2, TranscriptionModelV3 } from '@ai-sdk/provider';
+import type { TranscriptionModelV2, TranscriptionModelV3 } from '@ai-sdk/provider';
 
 export function asTranscriptionModelV3(
   model: TranscriptionModelV3 | TranscriptionModelV2,

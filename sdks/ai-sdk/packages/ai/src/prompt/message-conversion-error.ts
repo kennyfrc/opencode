@@ -1,5 +1,5 @@
 import { AISDKError } from '@ai-sdk/provider';
-import { UIMessage } from '../ui/ui-messages';
+import { type UIMessage } from '../ui/ui-messages';
 
 const name = 'AI_MessageConversionError';
 const marker = `vercel.ai.error.${name}`;
@@ -22,7 +22,7 @@ export class MessageConversionError extends AISDKError {
     this.originalMessage = originalMessage;
   }
 
-  static isInstance(error: unknown): error is MessageConversionError {
+  static override isInstance(error: unknown): error is MessageConversionError {
     return AISDKError.hasMarker(error, marker);
   }
 }

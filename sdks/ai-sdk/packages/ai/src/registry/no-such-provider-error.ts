@@ -35,7 +35,7 @@ export class NoSuchProviderError extends NoSuchModelError {
     this.availableProviders = availableProviders;
   }
 
-  static isInstance(error: unknown): error is NoSuchProviderError {
+  static override isInstance(error: unknown): error is NoSuchProviderError {
     return AISDKError.hasMarker(error, marker);
   }
 }

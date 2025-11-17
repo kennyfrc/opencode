@@ -20,7 +20,7 @@ export class UnsupportedFunctionalityError extends AISDKError {
     this.functionality = functionality;
   }
 
-  static isInstance(error: unknown): error is UnsupportedFunctionalityError {
+  static override isInstance(error: unknown): error is UnsupportedFunctionalityError {
     return AISDKError.hasMarker(error, marker);
   }
 }

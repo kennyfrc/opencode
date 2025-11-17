@@ -1,31 +1,31 @@
 import {
-  AssistantContent,
-  FilePart,
+  type AssistantContent,
+  type FilePart,
   isNonNullable,
-  ModelMessage,
-  TextPart,
-  ToolApprovalResponse,
-  ToolResultPart,
+  type ModelMessage,
+  type TextPart,
+  type ToolApprovalResponse,
+  type ToolResultPart,
 } from '@ai-sdk/provider-utils';
-import { ToolSet } from '../generate-text/tool-set';
+import { type ToolSet } from '../generate-text/tool-set';
 import { createToolModelOutput } from '../prompt/create-tool-model-output';
 import { MessageConversionError } from '../prompt/message-conversion-error';
 import {
-  DataUIPart,
-  DynamicToolUIPart,
-  FileUIPart,
+  type DataUIPart,
+  type DynamicToolUIPart,
+  type FileUIPart,
   getToolOrDynamicToolName,
-  InferUIMessageData,
-  InferUIMessageTools,
+  type InferUIMessageData,
+  type InferUIMessageTools,
   isDataUIPart,
   isFileUIPart,
   isReasoningUIPart,
   isTextUIPart,
   isToolOrDynamicToolUIPart,
-  ReasoningUIPart,
-  TextUIPart,
-  ToolUIPart,
-  UIMessage,
+  type ReasoningUIPart,
+  type TextUIPart,
+  type ToolUIPart,
+  type UIMessage,
 } from './ui-messages';
 
 /**

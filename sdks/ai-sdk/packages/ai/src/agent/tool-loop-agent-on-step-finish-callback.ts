@@ -1,5 +1,5 @@
-import { StepResult } from '../generate-text/step-result';
-import { ToolSet } from '../generate-text/tool-set';
+import type { StepResult } from '../generate-text/step-result';
+import type { ToolSet } from '../generate-text/tool-set';
 
 /**
 Callback that is set using the `onStepFinish` option.

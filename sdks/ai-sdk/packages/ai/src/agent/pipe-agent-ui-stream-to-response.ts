@@ -1,11 +1,11 @@
-import { ServerResponse } from 'node:http';
-import { UIMessageStreamOptions } from '../generate-text';
-import { Output } from '../generate-text/output';
-import { ToolSet } from '../generate-text/tool-set';
+import type { ServerResponse } from 'node:http';
+import type { UIMessageStreamOptions } from '../generate-text';
+import type { Output } from '../generate-text/output';
+import type { ToolSet } from '../generate-text/tool-set';
 import { pipeUIMessageStreamToResponse } from '../ui-message-stream';
-import { UIMessageStreamResponseInit } from '../ui-message-stream/ui-message-stream-response-init';
-import { InferUITools, UIMessage } from '../ui/ui-messages';
-import { Agent } from './agent';
+import type { UIMessageStreamResponseInit } from '../ui-message-stream/ui-message-stream-response-init';
+import type { InferUITools, UIMessage } from '../ui/ui-messages';
+import type { Agent } from './agent';
 import { createAgentUIStream } from './create-agent-ui-stream';
 
 /**

@@ -1,12 +1,12 @@
 import {
-  ZodDiscriminatedUnionDef,
-  ZodLiteralDef,
-  ZodTypeAny,
-  ZodUnionDef,
+  type ZodDiscriminatedUnionDef,
+  type ZodLiteralDef,
+  type ZodTypeAny,
+  type ZodUnionDef,
 } from 'zod/v3';
 import { parseDef } from '../parse-def';
-import { JsonSchema7Type } from '../parse-types';
-import { Refs } from '../refs';
+import { type JsonSchema7Type } from '../parse-types';
+import { type Refs } from '../refs';
 
 export const primitiveMappings = {
   ZodString: 'string',
@@ -77,7 +77,10 @@ export function parseUnionDef(
           case 'bigint':
             return [...acc, 'integer' as const];
           case 'object':
-            if (x._def.value === null) return [...acc, 'null' as const];
+            if (x._def.value === null) {
+              return [...acc, 'null' as const];
+            }
+            return acc;
           case 'symbol':
           case 'undefined':
           case 'function':

@@ -20,8 +20,8 @@ export const modelNotFoundParamSchema = lazySchema(() =>
 export class GatewayModelNotFoundError extends GatewayError {
   private readonly [symbol] = true; // used in isInstance
 
-  readonly name = name;
-  readonly type = 'model_not_found';
+  override readonly name = name;
+  override readonly type = 'model_not_found';
   readonly modelId?: string;
 
   constructor({
@@ -39,7 +39,7 @@ export class GatewayModelNotFoundError extends GatewayError {
     this.modelId = modelId;
   }
 
-  static isInstance(error: unknown): error is GatewayModelNotFoundError {
+  static override isInstance(error: unknown): error is GatewayModelNotFoundError {
     return GatewayError.hasMarker(error) && symbol in error;
   }
 }

@@ -4,10 +4,10 @@ const symbol = Symbol.for(marker);
 export abstract class GatewayError extends Error {
   private readonly [symbol] = true; // used in isInstance
 
-  abstract readonly name: string;
+  abstract override readonly name: string;
   abstract readonly type: string;
   readonly statusCode: number;
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
 
   constructor({
     message,

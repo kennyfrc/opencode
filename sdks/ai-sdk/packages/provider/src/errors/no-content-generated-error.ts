@@ -16,7 +16,7 @@ export class NoContentGeneratedError extends AISDKError {
     super({ name, message });
   }
 
-  static isInstance(error: unknown): error is NoContentGeneratedError {
+  static override isInstance(error: unknown): error is NoContentGeneratedError {
     return AISDKError.hasMarker(error, marker);
   }
 }
