@@ -370,8 +370,9 @@ func LoadFromConfig(config *opencode.Config, customCommands []opencode.Command) 
 
 		{
 			Name:        MessagesCopyCommand,
-			Description: "copy message",
+			Description: "copy the last assistant message",
 			Keybindings: parseBindings("<leader>y"),
+			Trigger:     []string{"copy"},
 		},
 		{
 			Name:        MessagesUndoCommand,
