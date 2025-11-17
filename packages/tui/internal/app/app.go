@@ -13,13 +13,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/sst/opencode-sdk-go"
-	"github.com/sst/opencode/internal/clipboard"
-	"github.com/sst/opencode/internal/commands"
-	"github.com/sst/opencode/internal/components/toast"
-	"github.com/sst/opencode/internal/id"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
+	"github.com/kennyfrc/opencode/internal/clipboard"
+	"github.com/kennyfrc/opencode/internal/commands"
+	"github.com/kennyfrc/opencode/internal/components/toast"
+	"github.com/kennyfrc/opencode/internal/id"
+	"github.com/kennyfrc/opencode/internal/styles"
+	"github.com/kennyfrc/opencode/internal/theme"
+	"github.com/kennyfrc/opencode/internal/util"
 )
 
 type Message struct {

@@ -14,12 +14,12 @@ import (
 	"github.com/sst/opencode-sdk-go"
 	"github.com/sst/opencode-sdk-go/option"
 	"github.com/sst/opencode-sdk-go/packages/ssestream"
-	"github.com/sst/opencode/internal/api"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/clipboard"
-	"github.com/sst/opencode/internal/decoders"
-	"github.com/sst/opencode/internal/tui"
-	"github.com/sst/opencode/internal/util"
+	"github.com/kennyfrc/opencode/internal/api"
+	"github.com/kennyfrc/opencode/internal/app"
+	"github.com/kennyfrc/opencode/internal/clipboard"
+	"github.com/kennyfrc/opencode/internal/decoders"
+	"github.com/kennyfrc/opencode/internal/tui"
+	"github.com/kennyfrc/opencode/internal/util"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/sst/opencode-sdk-go"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
+	"github.com/kennyfrc/opencode/internal/app"
+	"github.com/kennyfrc/opencode/internal/styles"
+	"github.com/kennyfrc/opencode/internal/theme"
 )
 
 type filesContextGroup struct {

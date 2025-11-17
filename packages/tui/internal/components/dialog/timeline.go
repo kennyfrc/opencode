@@ -9,13 +9,13 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/muesli/reflow/truncate"
 	"github.com/sst/opencode-sdk-go"
-	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/components/list"
-	"github.com/sst/opencode/internal/components/modal"
-	"github.com/sst/opencode/internal/layout"
-	"github.com/sst/opencode/internal/styles"
-	"github.com/sst/opencode/internal/theme"
-	"github.com/sst/opencode/internal/util"
+	"github.com/kennyfrc/opencode/internal/app"
+	"github.com/kennyfrc/opencode/internal/components/list"
+	"github.com/kennyfrc/opencode/internal/components/modal"
+	"github.com/kennyfrc/opencode/internal/layout"
+	"github.com/kennyfrc/opencode/internal/styles"
+	"github.com/kennyfrc/opencode/internal/theme"
+	"github.com/kennyfrc/opencode/internal/util"
 )
 
 // TimelineDialog interface for the session timeline dialog

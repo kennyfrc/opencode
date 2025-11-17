@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss/v2/compat"
-	"github.com/sst/opencode/internal/styles"
+	"github.com/kennyfrc/opencode/internal/styles"
 )
 
 var shimmerStart = time.Now()
