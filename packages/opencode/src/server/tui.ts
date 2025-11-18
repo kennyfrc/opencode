@@ -3,6 +3,8 @@ import { describeRoute, resolver, validator } from "hono-openapi"
 import { z } from "zod"
 import { AsyncQueue } from "../util/queue"
 
+const TUI_QUEUE_CAPACITY = 256
+
 const TuiRequest = z.object({
   path: z.string(),
   body: z.any(),
@@ -10,8 +12,8 @@ const TuiRequest = z.object({
 
 type TuiRequest = z.infer<typeof TuiRequest>
 
-const request = new AsyncQueue<TuiRequest>()
-const response = new AsyncQueue<any>()
+const request = new AsyncQueue<TuiRequest>(TUI_QUEUE_CAPACITY)
+const response = new AsyncQueue<any>(TUI_QUEUE_CAPACITY)
 
 export async function callTui(ctx: Context) {
   const body = await ctx.req.json()

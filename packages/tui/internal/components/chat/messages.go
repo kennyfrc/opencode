@@ -13,7 +13,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/sst/opencode-sdk-go"
 	"github.com/kennyfrc/opencode/internal/app"
 	"github.com/kennyfrc/opencode/internal/commands"
 	"github.com/kennyfrc/opencode/internal/components/dialog"
@@ -24,6 +23,7 @@ import (
 	"github.com/kennyfrc/opencode/internal/theme"
 	"github.com/kennyfrc/opencode/internal/util"
 	"github.com/kennyfrc/opencode/internal/viewport"
+	"github.com/sst/opencode-sdk-go"
 )
 
 type MessagesComponent interface {
@@ -63,6 +63,10 @@ type messagesComponent struct {
 	animating          bool
 	blocks             []string
 	shimmerBlocks      map[string]shimmerBlock
+	blockLineOffsets   []int
+	blockHeights       []int
+	visibleStartLine   int
+	visibleEndLine     int
 }
 
 type selection struct {
@@ -73,6 +77,7 @@ type selection struct {
 }
 
 const shimmerInterval = 30 * time.Millisecond
+const viewportGuardLines = 20
 
 type shimmerBlockKind int
 
@@ -292,6 +297,10 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messagePositions = msg.messagePositions
 		m.blocks = msg.blocks
 		m.shimmerBlocks = msg.shimmerBlocks
+		m.blockLineOffsets = msg.blockLineOffsets
+		m.blockHeights = msg.blockHeights
+		m.visibleStartLine = msg.visibleStartLine
+		m.visibleEndLine = msg.visibleEndLine
 		m.tail = m.viewport.AtBottom()
 
 		// Preserve scroll across reflow
@@ -322,6 +331,7 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	viewport, cmd := m.viewport.Update(msg)
 	m.viewport = viewport
 	cmds = append(cmds, cmd)
+	m.updateVisibleContent(false)
 
 	return m, tea.Batch(cmds...)
 }
@@ -339,15 +349,27 @@ type renderCompleteMsg struct {
 	messagePositions map[string]int
 	blocks           []string
 	shimmerBlocks    map[string]shimmerBlock
+	blockLineOffsets []int
+	blockHeights     []int
+	visibleStartLine int
+	visibleEndLine   int
 }
 
-func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, header string) (string, []string) {
+func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, header string, offset int) (string, []string) {
 	t := theme.CurrentTheme()
 	final := []string{}
 	clipboard := []string{}
 	var sel *selection
 	if m.selection != nil {
 		sel = m.selection.coords(lipgloss.Height(header) + 1)
+		if sel != nil && offset > 0 {
+			sel = &selection{
+				startX: sel.startX,
+				endX:   sel.endX,
+				startY: sel.startY - offset,
+				endY:   sel.endY - offset,
+			}
+		}
 	}
 	for _, block := range blocks {
 		lines := strings.Split(block, "\n")
@@ -392,6 +414,110 @@ func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, head
 	return content, clipboard
 }
 
+func (m *messagesComponent) composeViewportContent(blocks []string, blockOffsets, blockHeights []int, totalLines int, header string, yOffset int, height int) (string, []string, int, int) {
+	if len(blocks) == 0 {
+		return "\n", nil, 0, 0
+	}
+	start := yOffset - viewportGuardLines
+	if start < 0 {
+		start = 0
+	}
+	end := yOffset + height + viewportGuardLines
+	if end > totalLines {
+		end = totalLines
+	}
+	startIdx, endIdx, realStart := blockRange(blockOffsets, blockHeights, start, end)
+	if endIdx < startIdx {
+		return "\n", nil, 0, 0
+	}
+	subset := blocks[startIdx : endIdx+1]
+	visibleContent, clipboard := m.buildViewportContentFromBlocks(subset, header, realStart)
+	visibleBody := strings.TrimPrefix(visibleContent, "\n")
+	visibleHeight := 0
+	for i := startIdx; i <= endIdx; i++ {
+		visibleHeight += blockHeights[i]
+	}
+	visibleEnd := realStart + visibleHeight
+	if visibleEnd > totalLines {
+		visibleEnd = totalLines
+	}
+	var builder strings.Builder
+	builder.Grow(len(visibleBody) + realStart + (totalLines - visibleEnd) + 1)
+	builder.WriteString("\n")
+	if realStart > 0 {
+		builder.WriteString(strings.Repeat("\n", realStart))
+	}
+	builder.WriteString(visibleBody)
+	if remaining := totalLines - visibleEnd; remaining > 0 {
+		builder.WriteString(strings.Repeat("\n", remaining))
+	}
+	return builder.String(), clipboard, realStart, visibleEnd
+}
+
+func blockRange(offsets, heights []int, start, end int) (int, int, int) {
+	if len(offsets) == 0 {
+		return 0, -1, 0
+	}
+	idx := sort.Search(len(offsets), func(i int) bool {
+		return offsets[i]+heights[i] > start
+	})
+	if idx >= len(offsets) {
+		idx = len(offsets) - 1
+	}
+	realStart := offsets[idx]
+	endIdx := idx
+	for endIdx+1 < len(offsets) && offsets[endIdx+1] < end {
+		endIdx++
+	}
+	return idx, endIdx, realStart
+}
+
+func (m *messagesComponent) updateVisibleContent(force bool) {
+	if len(m.blocks) == 0 {
+		return
+	}
+	if !force {
+		desiredStart := m.viewport.YOffset - viewportGuardLines
+		if desiredStart < 0 {
+			desiredStart = 0
+		}
+		desiredEnd := m.viewport.YOffset + m.viewport.Height() + viewportGuardLines
+		if desiredEnd > m.lineCount {
+			desiredEnd = m.lineCount
+		}
+		if desiredStart >= m.visibleStartLine && desiredEnd <= m.visibleEndLine {
+			return
+		}
+	}
+	content, clipboard, startLine, endLine := m.composeViewportContent(
+		m.blocks,
+		m.blockLineOffsets,
+		m.blockHeights,
+		m.lineCount,
+		m.header,
+		m.viewport.YOffset,
+		m.viewport.Height(),
+	)
+	prevYOffset := m.viewport.YOffset
+	wasAtBottom := m.viewport.AtBottom()
+	m.viewport.SetContent(content)
+	if wasAtBottom && m.tail {
+		m.viewport.GotoBottom()
+	} else {
+		maxOffset := m.viewport.TotalLineCount() - m.viewport.Height()
+		if maxOffset < 0 {
+			maxOffset = 0
+		}
+		if prevYOffset > maxOffset {
+			prevYOffset = maxOffset
+		}
+		m.viewport.YOffset = prevYOffset
+	}
+	m.clipboard = clipboard
+	m.visibleStartLine = startLine
+	m.visibleEndLine = endLine
+}
+
 func (m *messagesComponent) refreshShimmerBlocks() tea.Cmd {
 	if len(m.shimmerBlocks) == 0 || len(m.blocks) == 0 {
 		return nil
@@ -414,15 +540,7 @@ func (m *messagesComponent) refreshShimmerBlocks() tea.Cmd {
 			}
 		}
 		if updated {
-			content, _ := m.buildViewportContentFromBlocks(m.blocks, m.header)
-			wasAtBottom := m.viewport.AtBottom()
-			prevYOffset := m.viewport.YOffset
-			m.viewport.SetContent(content)
-			if wasAtBottom {
-				m.viewport.GotoBottom()
-			} else {
-				m.viewport.YOffset = prevYOffset
-			}
+			m.updateVisibleContent(true)
 		}
 		if len(m.shimmerBlocks) == 0 {
 			m.animating = false
@@ -554,6 +672,8 @@ func (m *messagesComponent) renderView() tea.Cmd {
 
 		t := theme.CurrentTheme()
 		blocks := make([]string, 0)
+		blockLineOffsets := make([]int, 0)
+		blockHeights := make([]int, 0)
 		shimmerBlocks := make(map[string]shimmerBlock)
 		partCount := 0
 		lineCount := 0
@@ -589,6 +709,20 @@ func (m *messagesComponent) renderView() tea.Cmd {
 				break
 			}
 		}
+		appendBlock := func(content string, countPart bool) {
+			if content == "" {
+				return
+			}
+			if countPart {
+				partCount++
+			}
+			height := lipgloss.Height(content) + 1
+			blockLineOffsets = append(blockLineOffsets, lineCount)
+			blockHeights = append(blockHeights, height)
+			blocks = append(blocks, content)
+			lineCount += height
+		}
+
 		for _, message := range m.app.Messages {
 			var content string
 			var cached bool
@@ -687,9 +821,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 							m.cache.Set(key, content)
 						}
 						if content != "" {
-							partCount++
-							lineCount += lipgloss.Height(content) + 1
-							blocks = append(blocks, content)
+							appendBlock(content, true)
 						}
 					}
 				}
@@ -782,9 +914,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 							)
 						}
 						if content != "" {
-							partCount++
-							lineCount += lipgloss.Height(content) + 1
-							blocks = append(blocks, content)
+							appendBlock(content, true)
 							hasContent = true
 						}
 					case opencode.ToolPart:
@@ -832,11 +962,9 @@ func (m *messagesComponent) renderView() tea.Cmd {
 							)
 						}
 						if content != "" {
-							partCount++
-							lineCount += lipgloss.Height(content) + 1
 							index := len(blocks)
-							blocks = append(blocks, content)
-							
+							appendBlock(content, true)
+
 							// Register pending tools for shimmer animation
 							if part.State.Status == opencode.ToolPartStateStatusPending {
 								key := shimmerKey(shimmerBlockTool, part.ID)
@@ -847,7 +975,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 									partID:    part.ID,
 								}
 							}
-							
+
 							hasContent = true
 						}
 					case opencode.ReasoningPart:
@@ -877,20 +1005,20 @@ func (m *messagesComponent) renderView() tea.Cmd {
 								[]opencode.FilePart{},
 								[]opencode.AgentPart{},
 							)
-							partCount++
-							lineCount += lipgloss.Height(content) + 1
-							index := len(blocks)
-							blocks = append(blocks, content)
-							if shimmer {
-								key := shimmerKey(shimmerBlockReasoning, part.ID)
-								shimmerBlocks[key] = shimmerBlock{
-									index:     index,
-									kind:      shimmerBlockReasoning,
-									messageID: casted.ID,
-									partID:    part.ID,
+							if content != "" {
+								index := len(blocks)
+								appendBlock(content, true)
+								if shimmer {
+									key := shimmerKey(shimmerBlockReasoning, part.ID)
+									shimmerBlocks[key] = shimmerBlock{
+										index:     index,
+										kind:      shimmerBlockReasoning,
+										messageID: casted.ID,
+										partID:    part.ID,
+									}
 								}
+								hasContent = true
 							}
-							hasContent = true
 						}
 					}
 				}
@@ -924,15 +1052,15 @@ func (m *messagesComponent) renderView() tea.Cmd {
 						[]opencode.FilePart{},
 						[]opencode.AgentPart{},
 					)
-					partCount++
-					lineCount += lipgloss.Height(content) + 1
-					index := len(blocks)
-					blocks = append(blocks, content)
-					key := shimmerKey(shimmerBlockGenerating, casted.ID)
-					shimmerBlocks[key] = shimmerBlock{
-						index:     index,
-						kind:      shimmerBlockGenerating,
-						messageID: casted.ID,
+					if content != "" {
+						index := len(blocks)
+						appendBlock(content, true)
+						key := shimmerKey(shimmerBlockGenerating, casted.ID)
+						shimmerBlocks[key] = shimmerBlock{
+							index:     index,
+							kind:      shimmerBlockGenerating,
+							messageID: casted.ID,
+						}
 					}
 				}
 			}
@@ -945,8 +1073,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 					width,
 					WithBorderColor(t.Error()),
 				)
-				blocks = append(blocks, error)
-				lineCount += lipgloss.Height(error) + 1
+				appendBlock(error, false)
 			}
 		}
 
@@ -1015,7 +1142,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 				width,
 				WithBorderColor(t.BackgroundPanel()),
 			)
-			blocks = append(blocks, content)
+			appendBlock(content, false)
 		}
 
 		if m.app.CurrentPermission.ID != "" &&
@@ -1039,9 +1166,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 								width,
 							)
 							if content != "" {
-								partCount++
-								lineCount += lipgloss.Height(content) + 1
-								blocks = append(blocks, content)
+								appendBlock(content, true)
 							}
 						}
 					}
@@ -1049,7 +1174,15 @@ func (m *messagesComponent) renderView() tea.Cmd {
 			}
 		}
 
-		content, clipboard := m.buildViewportContentFromBlocks(blocks, header)
+		content, clipboard, visibleStart, visibleEnd := m.composeViewportContent(
+			blocks,
+			blockLineOffsets,
+			blockHeights,
+			lineCount,
+			header,
+			viewport.YOffset,
+			viewport.Height(),
+		)
 		viewport.SetHeight(m.height - lipgloss.Height(header))
 		viewport.SetContent(content)
 		if tail {
@@ -1061,7 +1194,6 @@ func (m *messagesComponent) renderView() tea.Cmd {
 		for key, value := range shimmerBlocks {
 			shimmerCopy[key] = value
 		}
-
 		return renderCompleteMsg{
 			viewport:         viewport,
 			clipboard:        clipboard,
@@ -1070,16 +1202,11 @@ func (m *messagesComponent) renderView() tea.Cmd {
 			lineCount:        lineCount,
 			messagePositions: messagePositions,
 			blocks:           blockCopy,
+			blockLineOffsets: append([]int(nil), blockLineOffsets...),
+			blockHeights:     append([]int(nil), blockHeights...),
+			visibleStartLine: visibleStart,
+			visibleEndLine:   visibleEnd,
 			shimmerBlocks:    shimmerCopy,
-		}
-
-		return renderCompleteMsg{
-			header:           header,
-			clipboard:        clipboard,
-			viewport:         viewport,
-			partCount:        partCount,
-			lineCount:        lineCount,
-			messagePositions: messagePositions,
 		}
 	}
 }
@@ -1289,6 +1416,7 @@ func (m *messagesComponent) PageUp() (tea.Model, tea.Cmd) {
 		return m, m.app.LoadOlderMessages(context.Background())
 	}
 	m.viewport.ViewUp()
+	m.updateVisibleContent(false)
 	if m.viewport.AtTop() && m.app.HasMoreHistory {
 		return m, m.app.LoadOlderMessages(context.Background())
 	}
@@ -1297,6 +1425,7 @@ func (m *messagesComponent) PageUp() (tea.Model, tea.Cmd) {
 
 func (m *messagesComponent) PageDown() (tea.Model, tea.Cmd) {
 	m.viewport.ViewDown()
+	m.updateVisibleContent(false)
 	return m, nil
 }
 
@@ -1305,6 +1434,7 @@ func (m *messagesComponent) HalfPageUp() (tea.Model, tea.Cmd) {
 		return m, m.app.LoadOlderMessages(context.Background())
 	}
 	m.viewport.HalfViewUp()
+	m.updateVisibleContent(false)
 	if m.viewport.AtTop() && m.app.HasMoreHistory {
 		return m, m.app.LoadOlderMessages(context.Background())
 	}
@@ -1313,6 +1443,7 @@ func (m *messagesComponent) HalfPageUp() (tea.Model, tea.Cmd) {
 
 func (m *messagesComponent) HalfPageDown() (tea.Model, tea.Cmd) {
 	m.viewport.HalfViewDown()
+	m.updateVisibleContent(false)
 	return m, nil
 }
 
@@ -1326,6 +1457,7 @@ func (m *messagesComponent) ThinkingBlocksVisible() bool {
 
 func (m *messagesComponent) GotoTop() (tea.Model, tea.Cmd) {
 	m.viewport.GotoTop()
+	m.updateVisibleContent(false)
 	if m.app.HasMoreHistory {
 		return m, m.app.LoadOlderMessages(context.Background())
 	}
@@ -1334,6 +1466,7 @@ func (m *messagesComponent) GotoTop() (tea.Model, tea.Cmd) {
 
 func (m *messagesComponent) GotoBottom() (tea.Model, tea.Cmd) {
 	m.viewport.GotoBottom()
+	m.updateVisibleContent(false)
 	return m, nil
 }
 

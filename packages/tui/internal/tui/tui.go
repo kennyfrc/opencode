@@ -15,7 +15,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 
-	"github.com/sst/opencode-sdk-go"
 	"github.com/kennyfrc/opencode/internal/api"
 	"github.com/kennyfrc/opencode/internal/app"
 	"github.com/kennyfrc/opencode/internal/commands"
@@ -30,6 +29,7 @@ import (
 	"github.com/kennyfrc/opencode/internal/styles"
 	"github.com/kennyfrc/opencode/internal/theme"
 	"github.com/kennyfrc/opencode/internal/util"
+	"github.com/sst/opencode-sdk-go"
 )
 
 type InterruptDebounceTimeoutMsg struct{}
@@ -71,6 +71,7 @@ const (
 
 const interruptDebounceTimeout = 1 * time.Second
 const exitDebounceTimeout = 1 * time.Second
+const mouseMotionThrottle = 12 * time.Millisecond
 
 type Model struct {
 	tea.Model
@@ -92,6 +93,7 @@ type Model struct {
 	interruptKeyState    InterruptKeyState
 	exitKeyState         ExitKeyState
 	messagesRight        bool
+	lastMouseMotion      time.Time
 }
 
 func (a Model) Init() tea.Cmd {
@@ -283,7 +285,7 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-	inputClearCommand := a.app.Commands[commands.InputClearCommand]
+		inputClearCommand := a.app.Commands[commands.InputClearCommand]
 		if inputClearCommand.Matches(msg, a.app.IsLeaderSequence) && a.editor.Length() > 0 {
 			return a, util.CmdHandler(commands.ExecuteCommandMsg(inputClearCommand))
 		}
@@ -335,6 +337,22 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		updatedEditor, cmd := a.editor.Update(msg)
 		a.editor = updatedEditor.(chat.EditorComponent)
 		return a, cmd
+	case tea.MouseMotionMsg:
+		if time.Since(a.lastMouseMotion) < mouseMotionThrottle {
+			return a, nil
+		}
+		a.lastMouseMotion = time.Now()
+		if a.modal != nil {
+			u, cmd := a.modal.Update(msg)
+			a.modal = u.(layout.Modal)
+			cmds = append(cmds, cmd)
+			return a, tea.Batch(cmds...)
+		}
+
+		updated, cmd := a.messages.Update(msg)
+		a.messages = updated.(chat.MessagesComponent)
+		cmds = append(cmds, cmd)
+		return a, tea.Batch(cmds...)
 	case tea.MouseWheelMsg:
 		if a.modal != nil {
 			u, cmd := a.modal.Update(msg)
@@ -592,7 +610,6 @@ func (a Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				messageID = casted.ID
 			}
 
-			
 			if matchIndex, exists := a.app.MessageIndex()[messageID]; exists {
 				match := a.app.Messages[matchIndex]
 				updatedMessage := app.Message{
