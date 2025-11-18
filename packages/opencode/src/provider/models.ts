@@ -7,7 +7,26 @@ import { Installation } from "../installation"
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
-  const filepath = path.join(Global.Path.cache, "models.json")
+  const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+  const CACHE_FILE = path.join(Global.Path.cache, "models.json")
+
+  async function getCacheAge(): Promise<number | undefined> {
+    const file = Bun.file(CACHE_FILE)
+    const exists = await file.exists()
+    if (!exists) return undefined
+
+    const stat = await file.stat().catch(() => undefined)
+    if (!stat) return undefined
+
+    // mtimeMs in milliseconds; if not available, fall back to undefined.
+    return "mtimeMs" in stat ? (stat as any).mtimeMs as number : undefined
+  }
+
+  function isCacheFresh(ageMs: number | undefined): boolean {
+    if (ageMs === undefined) return false
+    const now = Date.now()
+    return now - ageMs <= CACHE_TTL_MS
+  }
 
   export const Model = z
     .object({
@@ -60,32 +79,68 @@ export namespace ModelsDev {
 
   export type Provider = z.infer<typeof Provider>
 
-  export async function get() {
-    refresh()
-    const file = Bun.file(filepath)
-    const result = await file.json().catch(() => {})
-    if (result) return result as Record<string, Provider>
-    const json = await data()
-    return JSON.parse(json) as Record<string, Provider>
-  }
+  export async function refresh(): Promise<boolean> {
+    const file = Bun.file(CACHE_FILE)
+    log.info("refreshing", { file })
 
-  export async function refresh() {
-    const file = Bun.file(filepath)
-    log.info("refreshing", {
-      file,
-    })
     const result = await fetch("https://models.dev/api.json", {
       headers: {
         "User-Agent": Installation.USER_AGENT,
       },
       signal: AbortSignal.timeout(10 * 1000),
     }).catch((e) => {
-      log.error("Failed to fetch models.dev", {
-        error: e,
-      })
+      log.error("Failed to fetch models.dev", { error: e })
+      return undefined
     })
-    if (result && result.ok) await Bun.write(file, await result.text())
+
+    if (!result || !result.ok) return false
+
+    // If write fails, log but treat as failure
+    try {
+      await Bun.write(file, await result.text())
+      return true
+    } catch (e) {
+      log.error("Failed to write models.dev cache", { error: e })
+      return false
+    }
+  }
+
+  async function tryRefreshAndRead(): Promise<Record<string, Provider> | undefined> {
+    const ok = await refresh()
+    if (!ok) return undefined
+
+    const file = Bun.file(CACHE_FILE)
+    const result = await file.json().catch(() => undefined)
+    return result as Record<string, Provider> | undefined
+  }
+
+  export async function get() {
+    const file = Bun.file(CACHE_FILE)
+
+    // 1. Try cache
+    const age = await getCacheAge()
+    let cached: Record<string, Provider> | undefined
+
+    if (age !== undefined) {
+      cached = await file.json().catch(() => undefined)
+      if (cached && isCacheFresh(age)) {
+        // Cache is fresh enough; return immediately
+        return cached
+      }
+    }
+
+    // 2. Cache is missing or stale – try to refresh
+    const refreshed = await tryRefreshAndRead()
+    if (refreshed) return refreshed
+
+    // 3. Refresh failed – still use stale cache if we had any
+    if (cached) return cached
+
+    // 4. Last resort – macro data() (likely embedded at build time)
+    const json = await data()
+    return JSON.parse(json) as Record<string, Provider>
   }
 }
 
-setInterval(() => ModelsDev.refresh(), 60 * 1000 * 60).unref()
+// Refresh every 24 hours - matches our cache TTL strategy
+setInterval(() => ModelsDev.refresh(), 24 * 60 * 60 * 1000).unref()

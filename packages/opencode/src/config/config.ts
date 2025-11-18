@@ -569,6 +569,10 @@ export namespace Config {
         })
         .optional(),
       plugin: z.string().array().optional(),
+      disableDefaultPlugins: z
+        .boolean()
+        .optional()
+        .describe("Disable loading of default plugins (opencode-copilot-auth, opencode-anthropic-auth) for faster startup"),
       snapshot: z.boolean().optional(),
       share: z
         .enum(["manual", "auto", "disabled"])
@@ -682,6 +686,15 @@ export namespace Config {
             }),
           ]),
         )
+        .optional(),
+      lspConfig: z
+        .object({
+          autoInit: z
+            .boolean()
+            .optional()
+            .default(true)
+            .describe("Automatically initialize LSP servers on startup. Set to false for CLI-only workflows to improve startup time."),
+        })
         .optional()
         .refine(
           (data) => {

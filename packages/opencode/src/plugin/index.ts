@@ -26,7 +26,8 @@ export namespace Plugin {
       $: Bun.$,
     }
     const plugins = [...(config.plugin ?? [])]
-    if (!Flag.OPENCODE_DISABLE_DEFAULT_PLUGINS) {
+    const disableDefaults = config.disableDefaultPlugins ?? Flag.OPENCODE_DISABLE_DEFAULT_PLUGINS
+    if (!disableDefaults) {
       plugins.push("opencode-copilot-auth@0.0.3")
       plugins.push("opencode-anthropic-auth@0.0.2")
     }

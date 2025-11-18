@@ -230,8 +230,10 @@ export namespace Provider {
   }
 
   const state = Instance.state(async () => {
-    const config = await Config.get()
-    const database = await ModelsDev.get()
+    const [config, database] = await Promise.all([
+      Config.get(),
+      ModelsDev.get(),
+    ])
 
     const providers: {
       [providerID: string]: {
