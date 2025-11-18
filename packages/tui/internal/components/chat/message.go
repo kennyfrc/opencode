@@ -221,6 +221,7 @@ func renderText(
 	toolCalls ...opencode.ToolPart,
 ) string {
 	t := theme.CurrentTheme()
+	trimmedText := strings.TrimSpace(text)
 
 	var ts time.Time
 	backgroundColor := t.BackgroundPanel()
@@ -245,10 +246,17 @@ func renderText(
 			}
 			label = styles.NewStyle().Background(backgroundColor).Width(width - 6).Render(label)
 			content = label + "\n\n" + content
-		} else if strings.TrimSpace(text) == "Generating..." {
+		} else if trimmedText == "Generating..." {
 			label := util.Shimmer(text, backgroundColor, t.TextMuted(), t.Text())
 			label = styles.NewStyle().Background(backgroundColor).Width(width - 6).Render(label)
 			content = label
+		} else if !isThinking && trimmedText != "" && len(toolCalls) == 0 {
+			assistantLabel := styles.NewStyle().
+				Background(backgroundColor).
+				Foreground(t.TextMuted()).
+				Bold(true).
+				Render("Assistant:")
+			content = assistantLabel + "\n\n" + content
 		}
 	case opencode.UserMessage:
 		ts = time.UnixMilli(int64(casted.Time.Created))
