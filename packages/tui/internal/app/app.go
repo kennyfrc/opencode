@@ -12,7 +12,6 @@ import (
 	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/sst/opencode-sdk-go"
 	"github.com/kennyfrc/opencode/internal/clipboard"
 	"github.com/kennyfrc/opencode/internal/commands"
 	"github.com/kennyfrc/opencode/internal/components/toast"
@@ -20,6 +19,7 @@ import (
 	"github.com/kennyfrc/opencode/internal/styles"
 	"github.com/kennyfrc/opencode/internal/theme"
 	"github.com/kennyfrc/opencode/internal/util"
+	"github.com/sst/opencode-sdk-go"
 )
 
 type Message struct {
@@ -182,7 +182,7 @@ func New(
 		}
 	}
 	agent = &agents[agentIndex]
-	
+
 	// Initialize agent state for provider initialization
 	appState.Agent = agent.Name
 
@@ -485,7 +485,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 
 		return ProvidersLoadedMsg{
 			Providers: providers,
-			Response:   providersResponse,
+			Response:  providersResponse,
 		}
 	}
 }
@@ -493,7 +493,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 // ProvidersLoadedMsg carries async-loaded provider data
 type ProvidersLoadedMsg struct {
 	Providers []opencode.Provider
-	Response   *opencode.AppProvidersResponse
+	Response  *opencode.AppProvidersResponse
 }
 
 // ProcessProviders selects optimal model from available providers
@@ -977,11 +977,11 @@ func (a *App) ListMessages(
 	if response == nil {
 		return []Message{}, false, nil
 	}
-	result := []Message{}
+	result := make([]Message, 0, len(*response))
 	for _, message := range *response {
 		msg := Message{
 			Info:  message.Info.AsUnion(),
-			Parts: []opencode.PartUnion{},
+			Parts: make([]opencode.PartUnion, 0, len(message.Parts)),
 		}
 		for _, part := range message.Parts {
 			msg.Parts = append(msg.Parts, part.AsUnion())
@@ -1047,11 +1047,14 @@ func (a *App) AppendMessage(message Message) {
 
 // PrependMessages adds messages to front and rebuilds index
 func (a *App) PrependMessages(messages []Message) {
-	a.Messages = append(messages, a.Messages...)
-	a.messageIndex = make(map[string]int)
-	for i, msg := range a.Messages {
-		a.messageIndex[msg.ID()] = i
+	if len(messages) == 0 {
+		return
 	}
+	total := len(messages) + len(a.Messages)
+	combined := make([]Message, total)
+	copy(combined, messages)
+	copy(combined[len(messages):], a.Messages)
+	a.SetMessages(combined)
 }
 
 // RemoveMessageByID removes a message by ID, updates the slice and index.
@@ -1113,7 +1116,7 @@ func (a *App) InsertMessage(newMessage Message) {
 	}
 
 	a.Messages = append(a.Messages[:insertIndex], append([]Message{newMessage}, a.Messages[insertIndex:]...)...)
-	
+
 	a.messageIndex = make(map[string]int)
 	for i, msg := range a.Messages {
 		a.messageIndex[msg.ID()] = i
@@ -1132,5 +1135,3 @@ func (a *App) ListProviders(ctx context.Context) ([]opencode.Provider, error) {
 	providers := *response
 	return providers.Providers, nil
 }
-
-

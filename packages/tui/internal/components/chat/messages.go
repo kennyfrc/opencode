@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -67,6 +68,7 @@ type messagesComponent struct {
 	blockHeights       []int
 	visibleStartLine   int
 	visibleEndLine     int
+	renderContext      *renderContext
 }
 
 type selection struct {
@@ -92,6 +94,59 @@ type shimmerBlock struct {
 	kind      shimmerBlockKind
 	messageID string
 	partID    string
+}
+
+type renderContext struct {
+	blocks           []string
+	blockLineOffsets []int
+	blockHeights     []int
+	shimmerBlocks    map[string]shimmerBlock
+	messagePositions map[string]int
+	clipboard        []string
+}
+
+var renderContextPool = sync.Pool{
+	New: func() any {
+		return &renderContext{
+			blocks:           make([]string, 0, 128),
+			blockLineOffsets: make([]int, 0, 128),
+			blockHeights:     make([]int, 0, 128),
+			shimmerBlocks:    make(map[string]shimmerBlock),
+			messagePositions: make(map[string]int),
+			clipboard:        make([]string, 0, 32),
+		}
+	},
+}
+
+func (rc *renderContext) reset() {
+	rc.blocks = rc.blocks[:0]
+	rc.blockLineOffsets = rc.blockLineOffsets[:0]
+	rc.blockHeights = rc.blockHeights[:0]
+	if rc.shimmerBlocks == nil {
+		rc.shimmerBlocks = make(map[string]shimmerBlock)
+	} else {
+		clear(rc.shimmerBlocks)
+	}
+	if rc.messagePositions == nil {
+		rc.messagePositions = make(map[string]int)
+	} else {
+		clear(rc.messagePositions)
+	}
+	rc.clipboard = rc.clipboard[:0]
+}
+
+func acquireRenderContext() *renderContext {
+	rc := renderContextPool.Get().(*renderContext)
+	rc.reset()
+	return rc
+}
+
+func releaseRenderContext(rc *renderContext) {
+	if rc == nil {
+		return
+	}
+	rc.reset()
+	renderContextPool.Put(rc)
 }
 
 func (s selection) coords(offset int) *selection {
@@ -289,16 +344,22 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tail = true
 		return m, m.renderView()
 	case renderCompleteMsg:
+		if m.renderContext != nil {
+			releaseRenderContext(m.renderContext)
+		}
+		m.renderContext = msg.renderContext
 		m.partCount = msg.partCount
 		m.lineCount = msg.lineCount
 		m.rendering = false
-		m.clipboard = msg.clipboard
+		if msg.renderContext != nil {
+			m.clipboard = msg.renderContext.clipboard
+			m.messagePositions = msg.renderContext.messagePositions
+			m.blocks = msg.renderContext.blocks
+			m.shimmerBlocks = msg.renderContext.shimmerBlocks
+			m.blockLineOffsets = msg.renderContext.blockLineOffsets
+			m.blockHeights = msg.renderContext.blockHeights
+		}
 		m.loading = false
-		m.messagePositions = msg.messagePositions
-		m.blocks = msg.blocks
-		m.shimmerBlocks = msg.shimmerBlocks
-		m.blockLineOffsets = msg.blockLineOffsets
-		m.blockHeights = msg.blockHeights
 		m.visibleStartLine = msg.visibleStartLine
 		m.visibleEndLine = msg.visibleEndLine
 		m.tail = m.viewport.AtBottom()
@@ -342,23 +403,17 @@ func (m *messagesComponent) shouldAnimateShimmer() bool {
 
 type renderCompleteMsg struct {
 	viewport         viewport.Model
-	clipboard        []string
 	header           string
 	partCount        int
 	lineCount        int
-	messagePositions map[string]int
-	blocks           []string
-	shimmerBlocks    map[string]shimmerBlock
-	blockLineOffsets []int
-	blockHeights     []int
 	visibleStartLine int
 	visibleEndLine   int
+	renderContext    *renderContext
 }
 
-func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, header string, offset int) (string, []string) {
+func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, header string, offset int, clipboard []string) (string, []string) {
 	t := theme.CurrentTheme()
-	final := []string{}
-	clipboard := []string{}
+	clipboard = clipboard[:0]
 	var sel *selection
 	if m.selection != nil {
 		sel = m.selection.coords(lipgloss.Height(header) + 1)
@@ -371,52 +426,56 @@ func (m *messagesComponent) buildViewportContentFromBlocks(blocks []string, head
 			}
 		}
 	}
+	builder := util.GetBuilder()
+	defer util.PutBuilder(builder)
+	builder.WriteString("\n")
+	lineCount := 0
 	for _, block := range blocks {
 		lines := strings.Split(block, "\n")
 		for index, line := range lines {
-			if sel == nil || index == 0 || index == len(lines)-1 {
-				final = append(final, line)
-				continue
-			}
-			y := len(final)
-			if y >= sel.startY && y <= sel.endY {
-				left := 3
-				if y == sel.startY {
-					left = sel.startX - 2
-				}
-				left = max(3, left)
+			if sel != nil && index > 0 && index < len(lines)-1 {
+				y := lineCount
+				if y >= sel.startY && y <= sel.endY {
+					left := 3
+					if y == sel.startY {
+						left = sel.startX - 2
+					}
+					left = max(3, left)
 
-				width := ansi.StringWidth(line)
-				right := width - 1
-				if y == sel.endY {
-					right = min(sel.endX-2, right)
-				}
+					width := ansi.StringWidth(line)
+					right := width - 1
+					if y == sel.endY {
+						right = min(sel.endX-2, right)
+					}
 
-				prefix := ansi.Cut(line, 0, left)
-				middle := strings.TrimRight(ansi.Strip(ansi.Cut(line, left, right)), " ")
-				suffix := ansi.Cut(line, left+ansi.StringWidth(middle), width)
-				clipboard = append(clipboard, middle)
-				line = prefix + styles.NewStyle().
-					Background(t.TextMuted()).
-					Foreground(t.BackgroundPanel()).
-					Render(ansi.Strip(middle)) +
-					suffix
+					prefix := ansi.Cut(line, 0, left)
+					middle := strings.TrimRight(ansi.Strip(ansi.Cut(line, left, right)), " ")
+					suffix := ansi.Cut(line, left+ansi.StringWidth(middle), width)
+					clipboard = append(clipboard, middle)
+					line = prefix + styles.NewStyle().
+						Background(t.TextMuted()).
+						Foreground(t.BackgroundPanel()).
+						Render(ansi.Strip(middle)) +
+						suffix
+				}
 			}
-			final = append(final, line)
+			builder.WriteString(line)
+			builder.WriteString("\n")
+			lineCount++
 		}
-		y := len(final)
+		y := lineCount
 		if sel != nil && y >= sel.startY && y < sel.endY {
 			clipboard = append(clipboard, "")
 		}
-		final = append(final, "")
+		builder.WriteString("\n")
+		lineCount++
 	}
-	content := "\n" + strings.Join(final, "\n")
-	return content, clipboard
+	return builder.String(), clipboard
 }
 
-func (m *messagesComponent) composeViewportContent(blocks []string, blockOffsets, blockHeights []int, totalLines int, header string, yOffset int, height int) (string, []string, int, int) {
+func (m *messagesComponent) composeViewportContent(blocks []string, blockOffsets, blockHeights []int, totalLines int, header string, yOffset int, height int, clipboard []string) (string, []string, int, int) {
 	if len(blocks) == 0 {
-		return "\n", nil, 0, 0
+		return "\n", clipboard[:0], 0, 0
 	}
 	start := yOffset - viewportGuardLines
 	if start < 0 {
@@ -431,7 +490,7 @@ func (m *messagesComponent) composeViewportContent(blocks []string, blockOffsets
 		return "\n", nil, 0, 0
 	}
 	subset := blocks[startIdx : endIdx+1]
-	visibleContent, clipboard := m.buildViewportContentFromBlocks(subset, header, realStart)
+	visibleContent, clipboard := m.buildViewportContentFromBlocks(subset, header, realStart, clipboard)
 	visibleBody := strings.TrimPrefix(visibleContent, "\n")
 	visibleHeight := 0
 	for i := startIdx; i <= endIdx; i++ {
@@ -441,7 +500,8 @@ func (m *messagesComponent) composeViewportContent(blocks []string, blockOffsets
 	if visibleEnd > totalLines {
 		visibleEnd = totalLines
 	}
-	var builder strings.Builder
+	builder := util.GetBuilder()
+	defer util.PutBuilder(builder)
 	builder.Grow(len(visibleBody) + realStart + (totalLines - visibleEnd) + 1)
 	builder.WriteString("\n")
 	if realStart > 0 {
@@ -497,6 +557,7 @@ func (m *messagesComponent) updateVisibleContent(force bool) {
 		m.header,
 		m.viewport.YOffset,
 		m.viewport.Height(),
+		m.clipboard[:0],
 	)
 	prevYOffset := m.viewport.YOffset
 	wasAtBottom := m.viewport.AtBottom()
@@ -514,6 +575,9 @@ func (m *messagesComponent) updateVisibleContent(force bool) {
 		m.viewport.YOffset = prevYOffset
 	}
 	m.clipboard = clipboard
+	if m.renderContext != nil {
+		m.renderContext.clipboard = clipboard
+	}
 	m.visibleStartLine = startLine
 	m.visibleEndLine = endLine
 }
@@ -671,13 +735,14 @@ func (m *messagesComponent) renderView() tea.Cmd {
 		defer measure()
 
 		t := theme.CurrentTheme()
-		blocks := make([]string, 0)
-		blockLineOffsets := make([]int, 0)
-		blockHeights := make([]int, 0)
-		shimmerBlocks := make(map[string]shimmerBlock)
+		ctx := acquireRenderContext()
+		blocks := ctx.blocks[:0]
+		blockLineOffsets := ctx.blockLineOffsets[:0]
+		blockHeights := ctx.blockHeights[:0]
+		shimmerBlocks := ctx.shimmerBlocks
 		partCount := 0
 		lineCount := 0
-		messagePositions := make(map[string]int) // Track message ID to line position
+		messagePositions := ctx.messagePositions // Track message ID to line position
 
 		orphanedToolCalls := make([]opencode.ToolPart, 0)
 
@@ -1182,6 +1247,7 @@ func (m *messagesComponent) renderView() tea.Cmd {
 			header,
 			viewport.YOffset,
 			viewport.Height(),
+			ctx.clipboard[:0],
 		)
 		viewport.SetHeight(m.height - lipgloss.Height(header))
 		viewport.SetContent(content)
@@ -1189,24 +1255,21 @@ func (m *messagesComponent) renderView() tea.Cmd {
 			viewport.GotoBottom()
 		}
 
-		blockCopy := append([]string(nil), blocks...)
-		shimmerCopy := make(map[string]shimmerBlock, len(shimmerBlocks))
-		for key, value := range shimmerBlocks {
-			shimmerCopy[key] = value
-		}
+		ctx.blocks = blocks
+		ctx.blockLineOffsets = blockLineOffsets
+		ctx.blockHeights = blockHeights
+		ctx.messagePositions = messagePositions
+		ctx.shimmerBlocks = shimmerBlocks
+		ctx.clipboard = clipboard
+
 		return renderCompleteMsg{
 			viewport:         viewport,
-			clipboard:        clipboard,
 			header:           header,
 			partCount:        partCount,
 			lineCount:        lineCount,
-			messagePositions: messagePositions,
-			blocks:           blockCopy,
-			blockLineOffsets: append([]int(nil), blockLineOffsets...),
-			blockHeights:     append([]int(nil), blockHeights...),
 			visibleStartLine: visibleStart,
 			visibleEndLine:   visibleEnd,
-			shimmerBlocks:    shimmerCopy,
+			renderContext:    ctx,
 		}
 	}
 }

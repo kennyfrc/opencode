@@ -38,7 +38,8 @@ type Reader struct {
 	term       string         // $TERM
 	paste      []byte         // bracketed paste buffer; nil when disabled
 	buf        [256]byte      // read buffer
-	partialSeq []byte         // holds incomplete escape sequences
+	partialBuf [512]byte      // holds incomplete escape sequences
+	partialLen int
 	keyState   win32InputState
 	parser     Parser
 	logger     Logger
@@ -81,11 +82,18 @@ func (d *Reader) readEvents() ([]Event, error) {
 
 	// Combine any partial sequence from previous read with new data.
 	var buf []byte
-	if len(d.partialSeq) > 0 {
-		buf = make([]byte, len(d.partialSeq)+nb)
-		copy(buf, d.partialSeq)
-		copy(buf[len(d.partialSeq):], d.buf[:nb])
-		d.partialSeq = nil
+	if d.partialLen > 0 {
+		total := d.partialLen + nb
+		if total <= len(d.partialBuf) {
+			copy(d.partialBuf[d.partialLen:], d.buf[:nb])
+			buf = d.partialBuf[:total]
+		} else {
+			combined := make([]byte, total)
+			copy(combined, d.partialBuf[:d.partialLen])
+			copy(combined[d.partialLen:], d.buf[:nb])
+			buf = combined
+		}
+		d.partialLen = 0
 	} else {
 		buf = d.buf[:nb]
 	}
@@ -112,8 +120,13 @@ func (d *Reader) readEvents() ([]Event, error) {
 		if consumed == 0 && ev == nil {
 			rem := len(buf) - i
 			if rem > 0 {
-				d.partialSeq = make([]byte, rem)
-				copy(d.partialSeq, buf[i:])
+				if rem > len(d.partialBuf) {
+					copy(d.partialBuf[:], buf[len(buf)-len(d.partialBuf):])
+					d.partialLen = len(d.partialBuf)
+				} else {
+					copy(d.partialBuf[:rem], buf[i:i+rem])
+					d.partialLen = rem
+				}
 			}
 			break
 		}
@@ -167,8 +180,7 @@ func coalesceMouseEvents(in []Event) []Event {
 	if len(in) < 2 {
 		return in
 	}
-
-	out := make([]Event, 0, len(in))
+	out := in[:0]
 	for _, ev := range in {
 		switch ev.(type) {
 		case MouseWheelEvent:

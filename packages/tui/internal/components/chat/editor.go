@@ -3,6 +3,7 @@ package chat
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -14,7 +15,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/google/uuid"
-	"github.com/sst/opencode-sdk-go"
 	"github.com/kennyfrc/opencode/internal/app"
 	"github.com/kennyfrc/opencode/internal/attachment"
 	"github.com/kennyfrc/opencode/internal/clipboard"
@@ -25,6 +25,7 @@ import (
 	"github.com/kennyfrc/opencode/internal/styles"
 	"github.com/kennyfrc/opencode/internal/theme"
 	"github.com/kennyfrc/opencode/internal/util"
+	"github.com/sst/opencode-sdk-go"
 )
 
 type EditorComponent interface {
@@ -693,9 +694,19 @@ func (m *editorComponent) handleLongPaste(text string) {
 	m.pasteCounter++
 
 	// Create attachment with full text as base64 encoded data
-	fileBytes := []byte(text)
-	base64EncodedText := base64.StdEncoding.EncodeToString(fileBytes)
-	url := fmt.Sprintf("data:text/plain;base64,%s", base64EncodedText)
+	builder := util.GetBuilder()
+	defer util.PutBuilder(builder)
+	builder.WriteString("data:text/plain;base64,")
+	encoder := base64.NewEncoder(base64.StdEncoding, builder)
+	if _, err := io.WriteString(encoder, text); err != nil {
+		slog.Error("Failed to encode pasted text", "error", err)
+		return
+	}
+	if err := encoder.Close(); err != nil {
+		slog.Error("Failed to finalize pasted text", "error", err)
+		return
+	}
+	url := builder.String()
 
 	fileName := fmt.Sprintf("pasted-text-%d.txt", m.pasteCounter)
 	displayText := fmt.Sprintf("[pasted #%d %d+ lines]", m.pasteCounter, lineCount)
@@ -854,15 +865,55 @@ func (m *editorComponent) createAttachmentFromFile(filePath string) *attachment.
 		}
 	}
 
-	// For binary files (images, PDFs), read and encode
-	fileBytes, err := os.ReadFile(filePath)
+	file, err := os.Open(absolutePath)
 	if err != nil {
 		slog.Error("Failed to read file", "error", err)
 		return nil
 	}
+	defer file.Close()
 
-	base64EncodedFile := base64.StdEncoding.EncodeToString(fileBytes)
-	url := fmt.Sprintf("data:%s;base64,%s", mediaType, base64EncodedFile)
+	buf := util.GetByteSlice()
+	defer util.PutByteSlice(buf)
+	chunk := buf[:cap(buf)]
+
+	builder := util.GetBuilder()
+	defer util.PutBuilder(builder)
+	builder.WriteString("data:")
+	builder.WriteString(mediaType)
+	builder.WriteString(";base64,")
+	encoder := base64.NewEncoder(base64.StdEncoding, builder)
+
+	var fileBytes []byte
+	if info, statErr := file.Stat(); statErr == nil {
+		size := info.Size()
+		if size > 0 && size < 64<<20 {
+			fileBytes = make([]byte, 0, int(size))
+		}
+	}
+
+	for {
+		n, readErr := file.Read(chunk)
+		if n > 0 {
+			fileBytes = append(fileBytes, chunk[:n]...)
+			if _, writeErr := encoder.Write(chunk[:n]); writeErr != nil {
+				slog.Error("Failed to encode attachment", "error", writeErr)
+				return nil
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			slog.Error("Failed to read file", "error", readErr)
+			return nil
+		}
+	}
+	if err := encoder.Close(); err != nil {
+		slog.Error("Failed to finalize encoding", "error", err)
+		return nil
+	}
+
+	url := builder.String()
 	attachmentCount := len(m.textarea.GetAttachments())
 	attachmentIndex := attachmentCount + 1
 	label := "File"
