@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -61,6 +62,8 @@ type messagesComponent struct {
 	lineCount          int
 	selection          *selection
 	messagePositions   map[string]int // map message ID to line position
+	draggingScrollbar  bool
+	dragStartOffset    int
 	animating          bool
 	blocks             []string
 	shimmerBlocks      map[string]shimmerBlock
@@ -200,6 +203,54 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 	case tea.MouseClickMsg:
 		slog.Info("mouse", "x", msg.X, "y", msg.Y, "offset", m.viewport.YOffset)
+		
+		// Calculate header height and scrollbar position
+		headerHeight := lipgloss.Height(m.header)
+		viewportX := 2 // Assuming 2 char left padding based on header style
+		scrollbarX := viewportX + m.viewport.Width() - 1
+		
+		// Check if click is on scrollbar (with tolerance)
+		isScrollbarHit := msg.X == scrollbarX || msg.X == scrollbarX-1
+		isInViewportY := msg.Y >= headerHeight && msg.Y < headerHeight+m.viewport.Height()
+
+		// Handle scrollbar interaction
+		if isScrollbarHit && isInViewportY {
+			m.draggingScrollbar = true
+			// Visual feedback
+			t := theme.CurrentTheme()
+			m.viewport.ScrollbarThumbStyle = lipgloss.NewStyle().Background(t.Primary()) // Highlight
+			
+			relY := msg.Y - headerHeight
+			
+			// Calculate current thumb position (using same logic as renderScrollbar)
+			totalLines := m.viewport.TotalLineCount()
+			viewportHeight := m.viewport.Height()
+			thumbHeight := int(math.Max(1.0, (float64(viewportHeight)/float64(totalLines))*float64(viewportHeight)))
+			scrollableThumbSpace := float64(viewportHeight - thumbHeight)
+			scrollableContentSpace := float64(totalLines - viewportHeight)
+			
+			currentThumbY := 0
+			if scrollableContentSpace > 0 {
+				ratio := float64(m.viewport.YOffset) / float64(scrollableContentSpace)
+				currentThumbY = int(ratio * float64(scrollableThumbSpace))
+			}
+			
+			isOnThumb := relY >= currentThumbY && relY < currentThumbY + thumbHeight
+			
+			// Set drag offset and only scroll if clicking on track, not thumb
+			if isOnThumb {
+				m.dragStartOffset = relY - currentThumbY
+			} else {
+				m.dragStartOffset = thumbHeight / 2 // Center for track clicks
+				m.viewport.ScrollToPosition(relY, m.viewport.Height(), false)
+			}
+			
+			m.tail = m.viewport.AtBottom() // Maintain tail logic if user dragged to bottom
+			
+			return m, m.renderView()
+		}
+
+		// Handle text selection (existing logic)
 		y := msg.Y + m.viewport.YOffset
 		if y > 0 {
 			m.selection = &selection{
@@ -214,6 +265,16 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.MouseMotionMsg:
+		// Handle scrollbar dragging
+		if m.draggingScrollbar {
+			headerHeight := lipgloss.Height(m.header)
+			relY := msg.Y - headerHeight - m.dragStartOffset
+			m.viewport.ScrollToPosition(relY, m.viewport.Height(), true)
+			m.tail = m.viewport.AtBottom()
+			return m, m.renderView()
+		}
+		
+		// Handle text selection (existing logic)
 		if m.selection != nil {
 			m.selection = &selection{
 				startX: m.selection.startX,
@@ -225,6 +286,14 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.MouseReleaseMsg:
+		// Handle scrollbar release
+		if m.draggingScrollbar {
+			m.draggingScrollbar = false
+			m.updateStyles() // Restore default scrollbar styles
+			return m, m.renderView()
+		}
+		
+		// Handle text selection release (existing logic)
 		if m.selection != nil {
 			m.selection = nil
 			if len(m.clipboard) > 0 {
@@ -240,6 +309,9 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		effectiveWidth := msg.Width - 4
+		if m.viewport.ShowScrollbar {
+			effectiveWidth -= 1 // Reserve space for scrollbar to prevent text truncation
+		}
 		// Clear cache on resize since width affects rendering
 		if m.width != effectiveWidth {
 			m.cache.Clear()
@@ -258,6 +330,7 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tail = true
 		return m, nil
 	case dialog.ThemeSelectedMsg:
+		m.updateStyles() // Update scrollbar styles
 		m.cache.Clear()
 		m.loading = true
 		return m, m.renderView()
@@ -1732,6 +1805,9 @@ func NewMessagesComponent(app *app.App) MessagesComponent {
 		vp.MouseWheelDelta = 2
 	}
 
+	// Enable Scrollbar
+	vp.ShowScrollbar = true
+
 	// Default to showing tool details, hidden thinking blocks
 	showToolDetails := true
 	if app.State.ShowToolDetails != nil {
@@ -1743,7 +1819,7 @@ func NewMessagesComponent(app *app.App) MessagesComponent {
 		showThinkingBlocks = *app.State.ShowThinkingBlocks
 	}
 
-	return &messagesComponent{
+	m := &messagesComponent{
 		app:                app,
 		viewport:           vp,
 		showToolDetails:    showToolDetails,
@@ -1752,4 +1828,17 @@ func NewMessagesComponent(app *app.App) MessagesComponent {
 		tail:               true,
 		messagePositions:   make(map[string]int),
 	}
+
+	// Initialize styles
+	m.updateStyles()
+
+	return m
+}
+
+// Add helper to update styles
+func (m *messagesComponent) updateStyles() {
+	t := theme.CurrentTheme()
+	// Use TextMuted for track (subtle) and Secondary/Border for thumb
+	m.viewport.ScrollbarTrackStyle = lipgloss.NewStyle().Background(t.BackgroundElement())
+	m.viewport.ScrollbarThumbStyle = lipgloss.NewStyle().Background(t.TextMuted())
 }

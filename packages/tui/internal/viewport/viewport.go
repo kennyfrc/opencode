@@ -131,6 +131,15 @@ type Model struct {
 
 	highlights []highlightInfo
 	hiIdx      int
+
+	// ShowScrollbar enables the vertical scrollbar.
+	ShowScrollbar bool
+
+	// ScrollbarThumbStyle is the style for the scrollbar thumb.
+	ScrollbarThumbStyle lipgloss.Style
+
+	// ScrollbarTrackStyle is the style for the scrollbar track.
+	ScrollbarTrackStyle lipgloss.Style
 }
 
 // GutterFunc can be implemented and set into [Model.LeftGutterFunc].
@@ -336,13 +345,107 @@ func (m Model) maxWidth() int {
 	if m.LeftGutterFunc != nil {
 		gutterSize = lipgloss.Width(m.LeftGutterFunc(GutterContext{}))
 	}
-	return m.Width() -
+	w := m.Width() -
 		m.Style.GetHorizontalFrameSize() -
 		gutterSize
+	if m.ShowScrollbar {
+		w -= 1
+	}
+	return w
 }
 
 func (m Model) maxHeight() int {
 	return m.Height() - m.Style.GetVerticalFrameSize()
+}
+
+// ScrollToPosition sets the YOffset based on a mouse position within the scrollbar track.
+// mouseY is the relative Y coordinate from the top of the viewport.
+// height is the visible height of the viewport (usually m.Height()).
+// maintainRelativePosition maintains the mouse-thumb relationship during dragging (vs centering for initial clicks).
+func (m *Model) ScrollToPosition(mouseY, height int, maintainRelativePosition bool) {
+	if !m.ShowScrollbar || height <= 0 {
+		return
+	}
+	
+	totalLines := m.lineCount()
+	if totalLines <= height {
+		return
+	}
+
+	// Recalculate geometry to match renderScrollbar
+	thumbHeight := int(math.Max(1.0, (float64(height)/float64(totalLines))*float64(height)))
+	scrollableThumbSpace := float64(height - thumbHeight)
+	scrollableContentSpace := float64(totalLines - height)
+
+	if scrollableThumbSpace <= 0 {
+		return
+	}
+
+	// Calculate target thumb position
+	var targetThumbY float64
+	if maintainRelativePosition {
+		// For dragging: use relative positioning to maintain grab offset
+		targetThumbY = float64(mouseY)
+	} else {
+		// For initial clicks: position thumb with proper bounds checking
+		targetThumbY = math.Max(0, math.Min(float64(mouseY), float64(height-thumbHeight)))
+	}
+
+	// Convert to content offset
+	ratio := targetThumbY / scrollableThumbSpace
+	newOffset := int(ratio * scrollableContentSpace)
+
+	m.SetYOffset(newOffset)
+}
+
+// renderScrollbar generates the scrollbar visualization
+func (m Model) renderScrollbar(height, totalLines, yOffset int) string {
+	if !m.ShowScrollbar || height <= 0 {
+		return ""
+	}
+
+	// If content fits, show full bar
+	if totalLines <= height {
+		return m.ScrollbarThumbStyle.Height(height).Render(strings.Repeat(" ", height))
+	}
+	
+	// Calculate thumb size and position
+	// Thumb size is proportional to visible height
+	thumbHeight := int(math.Max(1.0, (float64(height)/float64(totalLines))*float64(height)))
+	
+	// Track height matches the view height
+	trackHeight := height
+	
+	// Scrollable area for the thumb
+	scrollableThumbSpace := trackHeight - thumbHeight
+	
+	// Scrollable area for the content
+	scrollableContentSpace := totalLines - height
+	
+	// Calculate thumb position
+	thumbY := 0
+	if scrollableContentSpace > 0 {
+		ratio := float64(yOffset) / float64(scrollableContentSpace)
+		thumbY = int(ratio * float64(scrollableThumbSpace))
+	}
+	
+	// Clamp thumbY
+	if thumbY > scrollableThumbSpace {
+		thumbY = scrollableThumbSpace
+	}
+
+	var s strings.Builder
+	for i := 0; i < trackHeight; i++ {
+		if i >= thumbY && i < thumbY+thumbHeight {
+			s.WriteString(m.ScrollbarThumbStyle.Render(" "))
+		} else {
+			s.WriteString(m.ScrollbarTrackStyle.Render(" "))
+		}
+		if i < trackHeight-1 {
+			s.WriteString("\n")
+		}
+	}
+	return s.String()
 }
 
 // visibleLines returns the lines that should currently be visible in the
@@ -773,6 +876,9 @@ func (m Model) View() string {
 			h = min(h, sh)
 		}
 		contentWidth := w - m.Style.GetHorizontalFrameSize()
+		if m.ShowScrollbar {
+			contentWidth -= 1
+		}
 		contentHeight := h - m.Style.GetVerticalFrameSize()
 		visible := m.visibleLines()
 		contents := lipgloss.NewStyle().
@@ -781,6 +887,14 @@ func (m Model) View() string {
 			MaxHeight(contentHeight). // truncate height if taller.
 			MaxWidth(contentWidth).   // truncate width if wider.
 			Render(strings.Join(visible, "\n"))
+			
+		if m.ShowScrollbar {
+			// Calculate total lines (including those padded by MessagesComponent logic if applicable,
+			// but here m.lineCount() refers to the viewport's content)
+			scrollbar := m.renderScrollbar(contentHeight, m.lineCount(), m.YOffset)
+			contents = lipgloss.JoinHorizontal(lipgloss.Top, contents, scrollbar)
+		}
+
 		return m.Style.
 			UnsetWidth().UnsetHeight(). // Style size already applied in contents.
 			Render(contents)
