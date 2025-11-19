@@ -373,7 +373,7 @@ func (m *Model) ScrollToPosition(mouseY, height int, maintainRelativePosition bo
 	}
 
 	// Recalculate geometry to match renderScrollbar
-	thumbHeight := int(math.Max(1.0, (float64(height)/float64(totalLines))*float64(height)))
+	thumbHeight := m.CalculateThumbHeight(height, totalLines)
 	scrollableThumbSpace := float64(height - thumbHeight)
 	scrollableContentSpace := float64(totalLines - height)
 
@@ -404,14 +404,14 @@ func (m Model) renderScrollbar(height, totalLines, yOffset int) string {
 		return ""
 	}
 
-	// If content fits, show full bar
+	// If content fits, show only track (no thumb)
 	if totalLines <= height {
-		return m.ScrollbarThumbStyle.Height(height).Render(strings.Repeat(" ", height))
+		return m.ScrollbarTrackStyle.Height(height).Render(strings.Repeat(" ", height))
 	}
 	
 	// Calculate thumb size and position
 	// Thumb size is proportional to visible height
-	thumbHeight := int(math.Max(1.0, (float64(height)/float64(totalLines))*float64(height)))
+	thumbHeight := m.CalculateThumbHeight(height, totalLines)
 	
 	// Track height matches the view height
 	trackHeight := height
@@ -913,5 +913,53 @@ func maxLineWidth(lines []string) int {
 	for _, line := range lines {
 		result = max(result, lipgloss.Width(line))
 	}
+	return result
+}
+
+// CalculateThumbHeight calculates the height of the scrollbar thumb
+// based on viewport height and total content lines.
+func (m Model) CalculateThumbHeight(viewportHeight, totalLines int) int {
+	if totalLines == 0 || viewportHeight <= 0 {
+		return 1
+	}
+
+	// Calculate proportional height - this is the standard formula
+	proportionalHeight := float64(viewportHeight) * float64(viewportHeight) / float64(totalLines)
+
+	// Much more aggressive capping for short content
+	// For very short content (less than 2x viewport), cap at 10%
+	if totalLines < viewportHeight*2 {
+		maxHeight := float64(viewportHeight) * 0.10
+		if proportionalHeight > maxHeight {
+			proportionalHeight = maxHeight
+		}
+	} else if totalLines < viewportHeight*5 {
+		// For short content (less than 5x viewport), cap at 20%
+		maxHeight := float64(viewportHeight) * 0.20
+		if proportionalHeight > maxHeight {
+			proportionalHeight = maxHeight
+		}
+	} else {
+		// For normal content, cap at 30%
+		maxHeight := float64(viewportHeight) * 0.30
+		if proportionalHeight > maxHeight {
+			proportionalHeight = maxHeight
+		}
+	}
+
+	// Ensure minimum thumb size (at least 2 lines or 5% of viewport)
+	minThumbSize := math.Max(2.0, float64(viewportHeight)*0.05)
+	if proportionalHeight < minThumbSize {
+		proportionalHeight = minThumbSize
+	}
+
+	// Ensure it doesn't exceed viewport height
+	if proportionalHeight > float64(viewportHeight) {
+		proportionalHeight = float64(viewportHeight)
+	}
+
+	// Convert to int
+	result := int(proportionalHeight)
+
 	return result
 }

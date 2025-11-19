@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -225,7 +224,7 @@ func (m *messagesComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Calculate current thumb position (using same logic as renderScrollbar)
 			totalLines := m.viewport.TotalLineCount()
 			viewportHeight := m.viewport.Height()
-			thumbHeight := int(math.Max(1.0, (float64(viewportHeight)/float64(totalLines))*float64(viewportHeight)))
+			thumbHeight := m.viewport.CalculateThumbHeight(viewportHeight, totalLines)
 			scrollableThumbSpace := float64(viewportHeight - thumbHeight)
 			scrollableContentSpace := float64(totalLines - viewportHeight)
 			
